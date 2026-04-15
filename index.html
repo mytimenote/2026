@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>2025 졸업앨범 음성 메시지</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;600&family=Noto+Sans+KR:wght@300;400&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    min-height: 100vh;
+    background: #0f0e0d;
+    font-family: 'Noto Sans KR', sans-serif;
+    color: #f0ece4;
+    padding: 3rem 1.5rem;
+  }
+
+  header {
+    text-align: center;
+    margin-bottom: 3rem;
+  }
+
+  .school-name {
+    font-size: 11px;
+    letter-spacing: 4px;
+    color: #8a7f6e;
+    margin-bottom: 1rem;
+  }
+
+  h1 {
+    font-family: 'Noto Serif KR', serif;
+    font-size: 28px;
+    font-weight: 600;
+    letter-spacing: -0.5px;
+    margin-bottom: .5rem;
+  }
+
+  .subtitle {
+    font-size: 13px;
+    color: #8a7f6e;
+    font-weight: 300;
+  }
+
+  .divider {
+    width: 40px;
+    height: 1px;
+    background: #3a3428;
+    margin: 2rem auto;
+  }
+
+  .class-section {
+    max-width: 480px;
+    margin: 0 auto 2rem;
+  }
+
+  .class-label {
+    font-size: 11px;
+    letter-spacing: 3px;
+    color: #8a7f6e;
+    margin-bottom: 1rem;
+    padding-left: .25rem;
+  }
+
+  .student-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 10px;
+  }
+
+  .student-card {
+    background: #1a1814;
+    border: 1px solid #2a2720;
+    border-radius: 12px;
+    padding: 1rem;
+    text-decoration: none;
+    color: #f0ece4;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    transition: border-color .2s, background .2s;
+  }
+
+  .student-card:hover {
+    border-color: #c9a96e;
+    background: #1e1c18;
+  }
+
+  .avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: #2a2518;
+    border: 1px solid #3a3428;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    color: #c9a96e;
+    flex-shrink: 0;
+    font-family: 'Noto Serif KR', serif;
+  }
+
+  .student-name {
+    font-size: 14px;
+    font-weight: 400;
+  }
+
+  .student-num {
+    font-size: 11px;
+    color: #5a5347;
+    margin-top: 2px;
+  }
+
+  footer {
+    text-align: center;
+    margin-top: 4rem;
+    font-size: 11px;
+    color: #3a3428;
+    letter-spacing: 2px;
+  }
+
+  /* ⬇️ 이 부분을 수정해서 학생 목록을 추가하세요 */
+</style>
+</head>
+<body>
+
+<header>
+  <div class="school-name">○○초등학교</div>
+  <h1>2025 졸업 메시지</h1>
+  <p class="subtitle">이름을 누르면 음성이 재생됩니다</p>
+</header>
+
+<div class="divider"></div>
+
+<!-- ✏️ 여기서 학반별로 학생 카드를 추가하세요 -->
+
+<div class="class-section">
+  <div class="class-label">6학년 1반</div>
+  <div class="student-grid">
+
+    <a class="student-card" href="play.html?student=홍길동&class=6학년 1반&file=홍길동">
+      <div class="avatar">홍</div>
+      <div>
+        <div class="student-name">홍길동</div>
+        <div class="student-num">1번</div>
+      </div>
+    </a>
+
+    <a class="student-card" href="play.html?student=김영희&class=6학년 1반&file=김영희">
+      <div class="avatar">김</div>
+      <div>
+        <div class="student-name">김영희</div>
+        <div class="student-num">2번</div>
+      </div>
+    </a>
+
+    <!-- 학생을 추가하려면 위 블록을 복사해서 이름과 번호만 바꾸세요 -->
+
+  </div>
+</div>
+
+<div class="class-section">
+  <div class="class-label">6학년 2반</div>
+  <div class="student-grid">
+
+    <a class="student-card" href="play.html?student=이민준&class=6학년 2반&file=이민준">
+      <div class="avatar">이</div>
+      <div>
+        <div class="student-name">이민준</div>
+        <div class="student-num">1번</div>
+      </div>
+    </a>
+
+    <!-- 학생 추가 -->
+
+  </div>
+</div>
+
+<footer>2025 · ○○초등학교 졸업앨범</footer>
+
+</body>
+</html>
