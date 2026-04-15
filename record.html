@@ -3,354 +3,107 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>졸업앨범 음성 녹음</title>
+<title>졸업 음성 메시지 녹음</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;600&family=Noto+Sans+KR:wght@300;400;500&display=swap');
-
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-:root {
-  --gold: #c9a96e;
-  --gold-dim: #8a6f3f;
-  --bg: #0f0e0d;
-  --bg-card: #1a1814;
-  --border: #2a2720;
-  --text: #f0ece4;
-  --muted: #8a7f6e;
-  --faint: #3a3428;
-  --red: #c96e6e;
-  --red-bg: #1e1413;
-  --red-border: #3d2020;
-  --green: #6ec98a;
-  --green-bg: #131e17;
-  --green-border: #20392a;
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --gold:#c9a96e;--gold-dim:#8a6f3f;
+  --bg:#0f0e0d;--bg-card:#1a1814;
+  --border:#2a2720;--text:#f0ece4;
+  --muted:#8a7f6e;--faint:#3a3428;
+  --red:#c96e6e;--red-bg:#1e1413;--red-border:#3d2020;
+  --green:#6ec98a;--green-bg:#131e17;--green-border:#1e3d28;
 }
-
-body {
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  background: var(--bg);
-  font-family: 'Noto Sans KR', sans-serif;
-  color: var(--text);
-  padding: 2rem 1.5rem;
-}
-
-.wrap {
-  width: 100%;
-  max-width: 380px;
-  animation: fadeUp .5s ease both;
-}
-
-@keyframes fadeUp {
-  from { opacity: 0; transform: translateY(14px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-
-/* 헤더 */
-.school-name {
-  font-size: 11px;
-  letter-spacing: 4px;
-  color: var(--muted);
-  text-align: center;
-  margin-bottom: 2rem;
-}
-
-h1 {
-  font-family: 'Noto Serif KR', serif;
-  font-size: 22px;
-  font-weight: 600;
-  text-align: center;
-  margin-bottom: .4rem;
-}
-
-.subtitle {
-  font-size: 13px;
-  color: var(--muted);
-  text-align: center;
-  font-weight: 300;
-  margin-bottom: 2rem;
-}
-
-.divider {
-  width: 32px;
-  height: 1px;
-  background: var(--faint);
-  margin: 0 auto 2rem;
-}
-
-/* 카드 */
-.card {
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  padding: 1.5rem;
-  margin-bottom: 1rem;
-}
-
-/* 입력 */
-.field-label {
-  font-size: 11px;
-  letter-spacing: 2px;
-  color: var(--muted);
-  margin-bottom: 8px;
-  display: block;
-}
-
-input[type=text] {
-  width: 100%;
-  padding: 10px 14px;
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  color: var(--text);
-  font-size: 15px;
-  font-family: 'Noto Sans KR', sans-serif;
-  outline: none;
-  transition: border-color .2s;
-  margin-bottom: 1.25rem;
-}
-
-input[type=text]:focus { border-color: var(--gold-dim); }
-input[type=text]::placeholder { color: var(--faint); }
-input[type=text]:last-of-type { margin-bottom: 0; }
-
-/* 파형 */
-.waveform {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  height: 56px;
-  margin: 1.5rem 0;
-}
-
-.bar {
-  width: 3px;
-  border-radius: 99px;
-  background: var(--gold);
-  height: 4px;
-  opacity: .25;
-  transition: opacity .3s;
-}
-
-.waveform.recording .bar {
-  animation: wave 1s ease-in-out infinite;
-  opacity: 1;
-}
-
-.waveform.playing .bar {
-  animation: wave 1.4s ease-in-out infinite;
-  background: var(--green);
-  opacity: 1;
-}
-
-@keyframes wave {
-  0%,100% { height: 4px;  opacity: .35; }
-  50%      { height: 42px; opacity: 1; }
-}
-
-/* 타이머 */
-.timer {
-  text-align: center;
-  font-size: 36px;
-  font-weight: 500;
-  font-variant-numeric: tabular-nums;
-  letter-spacing: 2px;
-  margin-bottom: .5rem;
-  color: var(--text);
-}
-
-.timer.recording { color: var(--red); }
-
-.status-msg {
-  text-align: center;
-  font-size: 13px;
-  color: var(--muted);
-  min-height: 20px;
-  margin-bottom: 1.5rem;
-}
-
-/* 녹음 버튼 */
-.rec-btn {
-  width: 68px;
-  height: 68px;
-  border-radius: 50%;
-  border: none;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin: 0 auto 1.5rem;
-  transition: transform .12s, background .2s;
-  background: #231f16;
-  border: 1px solid var(--border);
-  font-size: 26px;
-}
-
-.rec-btn:hover { border-color: var(--gold-dim); transform: scale(1.04); }
-.rec-btn:active { transform: scale(.96); }
-.rec-btn.recording { background: var(--red-bg); border-color: var(--red-border); animation: recPulse 1.2s ease-in-out infinite; }
-
-@keyframes recPulse {
-  0%,100% { box-shadow: 0 0 0 0 rgba(201,110,110,.25); }
-  50%      { box-shadow: 0 0 0 10px rgba(201,110,110,0); }
-}
-
-/* 미리듣기 */
-audio {
-  width: 100%;
-  border-radius: 8px;
-  accent-color: var(--gold);
-  margin-bottom: 1rem;
-  display: none;
-}
-
-/* 버튼 그룹 */
-.btn-group {
-  display: flex;
-  gap: 8px;
-  margin-top: .5rem;
-}
-
-.btn {
-  flex: 1;
-  padding: 11px 0;
-  border-radius: 10px;
-  border: 1px solid var(--border);
-  font-size: 14px;
-  font-family: 'Noto Sans KR', sans-serif;
-  cursor: pointer;
-  font-weight: 500;
-  transition: background .15s, border-color .15s, transform .1s;
-  background: transparent;
-  color: var(--text);
-}
-
-.btn:active { transform: scale(.97); }
-.btn:disabled { opacity: .35; cursor: not-allowed; transform: none; }
-
-.btn-retry {
-  color: var(--muted);
-  border-color: var(--border);
-}
-
-.btn-retry:hover:not(:disabled) { background: #1e1c18; }
-
-.btn-save {
-  background: #231f16;
-  border-color: var(--gold-dim);
-  color: var(--gold);
-}
-
-.btn-save:hover:not(:disabled) { background: #2a2415; border-color: var(--gold); }
-
-/* 알림 박스 */
-.alert {
-  border-radius: 10px;
-  padding: 1rem 1.25rem;
-  font-size: 13px;
-  line-height: 1.7;
-  margin-top: 1rem;
-  display: none;
-  text-align: center;
-}
-
-.alert.error   { background: var(--red-bg);   border: 1px solid var(--red-border);   color: var(--red); }
-.alert.success { background: var(--green-bg); border: 1px solid var(--green-border); color: var(--green); }
-.alert.loading { background: #161513; border: 1px solid var(--border); color: var(--muted); }
-
-.spinner {
-  display: inline-block;
-  width: 14px; height: 14px;
-  border: 2px solid var(--faint);
-  border-top-color: var(--gold);
-  border-radius: 50%;
-  animation: spin .7s linear infinite;
-  vertical-align: middle;
-  margin-right: 8px;
-}
-
-@keyframes spin { to { transform: rotate(360deg); } }
-
-/* 완료 화면 */
-.done-screen {
-  display: none;
-  text-align: center;
-  padding: 2rem 0;
-}
-
-.done-screen .big-icon { font-size: 56px; margin-bottom: 1rem; display: block; }
-.done-screen .done-title { font-family: 'Noto Serif KR', serif; font-size: 20px; font-weight: 600; margin-bottom: .5rem; }
-.done-screen .done-msg { font-size: 13px; color: var(--muted); line-height: 1.8; }
-
-.btn-another {
-  margin-top: 2rem;
-  padding: 10px 24px;
-  border: 1px solid var(--border);
-  border-radius: 99px;
-  font-size: 13px;
-  color: var(--muted);
-  background: transparent;
-  cursor: pointer;
-  font-family: 'Noto Sans KR', sans-serif;
-  transition: border-color .2s, color .2s;
-}
-
-.btn-another:hover { border-color: var(--gold-dim); color: var(--gold); }
-
-footer {
-  text-align: center;
-  font-size: 11px;
-  color: var(--faint);
-  letter-spacing: 2px;
-  margin-top: 2rem;
-}
+body{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;background:var(--bg);font-family:'Noto Sans KR',sans-serif;color:var(--text);padding:2rem 1.5rem}
+.wrap{width:100%;max-width:380px;animation:up .5s ease both}
+@keyframes up{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+.school{font-size:11px;letter-spacing:4px;color:var(--muted);text-align:center;margin-bottom:2rem}
+h1{font-family:'Noto Serif KR',serif;font-size:22px;font-weight:600;text-align:center;margin-bottom:.4rem}
+.sub{font-size:13px;color:var(--muted);text-align:center;font-weight:300;margin-bottom:2rem}
+.divider{width:32px;height:1px;background:var(--faint);margin:0 auto 2rem}
+.card{background:var(--bg-card);border:1px solid var(--border);border-radius:16px;padding:1.5rem;margin-bottom:1rem}
+.lbl{font-size:11px;letter-spacing:2px;color:var(--muted);margin-bottom:8px;display:block}
+input{width:100%;padding:10px 14px;background:var(--bg);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:15px;font-family:'Noto Sans KR',sans-serif;outline:none;transition:border-color .2s;margin-bottom:1.25rem}
+input:focus{border-color:var(--gold-dim)}
+input::placeholder{color:var(--faint)}
+input:last-of-type{margin-bottom:0}
+.timer{text-align:center;font-size:36px;font-weight:500;font-variant-numeric:tabular-nums;letter-spacing:2px;margin-bottom:.4rem;transition:color .3s}
+.timer.rec{color:var(--red)}
+.status{text-align:center;font-size:13px;color:var(--muted);min-height:20px;margin-bottom:1.5rem}
+.waveform{display:flex;align-items:center;justify-content:center;gap:4px;height:52px;margin-bottom:1.5rem}
+.bar{width:3px;border-radius:99px;background:var(--gold);height:4px;opacity:.2;transition:opacity .3s}
+.waveform.recording .bar{animation:wave 1s ease-in-out infinite;opacity:1}
+.waveform.playing   .bar{animation:wave 1.4s ease-in-out infinite;background:var(--green);opacity:1}
+@keyframes wave{0%,100%{height:4px;opacity:.3}50%{height:40px;opacity:1}}
+.rec-btn{width:68px;height:68px;border-radius:50%;border:1px solid var(--border);cursor:pointer;display:flex;align-items:center;justify-content:center;margin:0 auto 1.5rem;transition:transform .12s,border-color .2s;background:#231f16;font-size:26px}
+.rec-btn:hover{border-color:var(--gold-dim);transform:scale(1.04)}
+.rec-btn:active{transform:scale(.95)}
+.rec-btn.recording{background:var(--red-bg);border-color:var(--red-border);animation:pulse 1.2s ease-in-out infinite}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(201,110,110,.25)}50%{box-shadow:0 0 0 10px rgba(201,110,110,0)}}
+audio{width:100%;border-radius:8px;accent-color:var(--gold);margin-bottom:1rem;display:none}
+.btns{display:flex;gap:8px}
+.btn{flex:1;padding:11px 0;border-radius:10px;border:1px solid var(--border);font-size:14px;font-family:'Noto Sans KR',sans-serif;cursor:pointer;font-weight:500;transition:background .15s,border-color .15s,transform .1s;background:transparent;color:var(--text)}
+.btn:active{transform:scale(.97)}
+.btn:disabled{opacity:.35;cursor:not-allowed;transform:none}
+.btn-retry:hover:not(:disabled){background:#1e1c18}
+.btn-save{background:#231f16;border-color:var(--gold-dim);color:var(--gold)}
+.btn-save:hover:not(:disabled){background:#2a2415;border-color:var(--gold)}
+.alert{border-radius:10px;padding:1rem 1.25rem;font-size:13px;line-height:1.8;margin-top:1rem;display:none;text-align:center}
+.alert.err{background:var(--red-bg);border:1px solid var(--red-border);color:var(--red)}
+.alert.ok{background:var(--green-bg);border:1px solid var(--green-border);color:var(--green)}
+.alert.load{background:#161513;border:1px solid var(--border);color:var(--muted)}
+.spin{display:inline-block;width:13px;height:13px;border:2px solid var(--faint);border-top-color:var(--gold);border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:8px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.done{display:none;text-align:center;padding:2rem 0}
+.done .icon{font-size:56px;margin-bottom:1rem;display:block}
+.done .title{font-family:'Noto Serif KR',serif;font-size:20px;font-weight:600;margin-bottom:.75rem}
+.done .msg{font-size:13px;color:var(--muted);line-height:2}
+.btn-more{margin-top:2rem;padding:10px 24px;border:1px solid var(--border);border-radius:99px;font-size:13px;color:var(--muted);background:transparent;cursor:pointer;font-family:'Noto Sans KR',sans-serif;transition:border-color .2s,color .2s}
+.btn-more:hover{border-color:var(--gold-dim);color:var(--gold)}
+footer{text-align:center;font-size:11px;color:var(--faint);letter-spacing:2px;margin-top:2rem}
 </style>
 </head>
 <body>
 <div class="wrap">
 
-  <!-- ============================================================
-    ✏️ 설정 영역 — 여기만 수정하세요
-  ============================================================ -->
+  <!--
+  ✏️ GAS_URL 을 배포한 Google Apps Script 웹 앱 URL로 교체하세요
+     URL 파라미터 ?school=학교명 을 붙여서 링크 공유하면
+     학교 이름 입력 없이 자동 설정됩니다.
+  -->
   <script>
-    const CONFIG = {
-      schoolName:  "○○초등학교",          // 학교 이름
-      year:        "2025",                // 연도
-      githubToken: "여기에_토큰_입력",     // GitHub Personal Access Token
-      githubOwner: "여기에_계정명_입력",   // GitHub 계정명 (예: anosenstudio)
-      githubRepo:  "여기에_저장소명_입력", // 저장소 이름 (예: 2025-album)
-      audioFolder: "audio",              // 오디오 저장 폴더 (변경 불필요)
-    };
+    const GAS_URL = 'https://script.google.com/macros/s/AKfycbxCIUMBHvu0YU77z4ULqrZAez6bue3cWi7Fzyg5slz-FdIY05K1EclHCRDUdcBoxXbPuQ/exec';
+    const params  = new URLSearchParams(location.search);
+    const SCHOOL  = decodeURIComponent(params.get('school') || '');
   </script>
-  <!-- ============================================================ -->
 
-  <div class="school-name" id="schoolLabel"></div>
+  <div class="school" id="schoolLabel"></div>
   <h1>졸업 음성 메시지 녹음</h1>
-  <p class="subtitle">소중한 목소리를 남겨주세요</p>
+  <p class="sub">소중한 목소리를 남겨주세요 🎤</p>
   <div class="divider"></div>
 
-  <!-- 녹음 폼 -->
-  <div id="recordForm">
+  <div id="form">
+    <!-- 학교명 입력 (URL 파라미터 없을 때만 표시) -->
+    <div class="card" id="schoolCard" style="display:none">
+      <label class="lbl">학교 이름</label>
+      <input id="inputSchool" type="text" placeholder="예: ○○초등학교" />
+    </div>
+
     <div class="card">
-      <label class="field-label">이름</label>
-      <input type="text" id="inputName" placeholder="예: 홍길동" />
-      <label class="field-label">학반 및 번호</label>
-      <input type="text" id="inputClass" placeholder="예: 6학년 3반 15번" />
+      <label class="lbl">이름</label>
+      <input id="inputName" type="text" placeholder="예: 홍길동" />
+      <label class="lbl">학반 및 번호</label>
+      <input id="inputClass" type="text" placeholder="예: 6학년 3반 15번" />
     </div>
 
     <div class="card">
       <div class="timer" id="timer">00:00</div>
-      <div class="status-msg" id="statusMsg">버튼을 눌러 녹음을 시작하세요</div>
+      <div class="status" id="status">버튼을 눌러 녹음을 시작하세요</div>
 
-      <button class="rec-btn" id="recBtn" onclick="toggleRecord()">
-        <span id="recIcon">⏺</span>
-      </button>
+      <button class="rec-btn" id="recBtn" onclick="toggleRecord()">⏺</button>
 
-      <div class="waveform" id="waveform">
+      <div class="waveform" id="wave">
         <div class="bar" style="animation-delay:.00s"></div>
         <div class="bar" style="animation-delay:.07s"></div>
         <div class="bar" style="animation-delay:.14s"></div>
@@ -368,244 +121,187 @@ footer {
         <div class="bar" style="animation-delay:.00s"></div>
       </div>
 
-      <audio id="previewPlayer" controls
-        onplay="document.getElementById('waveform').className='waveform playing'"
-        onpause="document.getElementById('waveform').className='waveform'"
-        onended="document.getElementById('waveform').className='waveform'">
-      </audio>
+      <audio id="preview"
+        onplay="wave.className='waveform playing'"
+        onpause="wave.className='waveform'"
+        onended="wave.className='waveform'"></audio>
 
-      <div class="btn-group">
-        <button class="btn btn-retry" id="retryBtn" disabled onclick="retryRecord()">다시 녹음</button>
-        <button class="btn btn-save"  id="saveBtn"  disabled onclick="saveRecording()">저장하기 →</button>
+      <div class="btns">
+        <button class="btn btn-retry" id="retryBtn" disabled onclick="retry()">다시 녹음</button>
+        <button class="btn btn-save"  id="saveBtn"  disabled onclick="save()">저장하기 →</button>
       </div>
 
-      <div class="alert error"   id="alertError"></div>
-      <div class="alert success" id="alertSuccess"></div>
-      <div class="alert loading" id="alertLoading">
-        <span class="spinner"></span>업로드 중입니다…
-      </div>
+      <div class="alert err"  id="alertErr"></div>
+      <div class="alert load" id="alertLoad"><span class="spin"></span>저장 중입니다…</div>
     </div>
   </div>
 
   <!-- 완료 화면 -->
-  <div class="done-screen" id="doneScreen">
-    <span class="big-icon">🎉</span>
-    <div class="done-title" id="doneName"></div>
-    <div class="done-msg">
-      녹음이 저장되었어요!<br>
+  <div class="done" id="done">
+    <span class="icon">🎉</span>
+    <div class="title" id="doneTitle"></div>
+    <div class="msg">
+      녹음이 저장됐어요!<br>
       졸업앨범 QR코드를 스캔하면<br>
       이 목소리를 들을 수 있답니다 🎓
     </div>
-    <button class="btn-another" onclick="resetForm()">다른 학생 녹음하기</button>
+    <button class="btn-more" onclick="reset()">다른 학생 녹음하기</button>
   </div>
 
-  <footer id="footerLabel"></footer>
+  <footer id="footer"></footer>
 </div>
 
 <script>
-  // 페이지 초기화
-  document.getElementById('schoolLabel').textContent = CONFIG.schoolName;
-  document.getElementById('footerLabel').textContent = CONFIG.year + ' · ' + CONFIG.schoolName + ' 졸업앨범';
-
-  let mediaRecorder = null;
-  let audioChunks   = [];
-  let isRecording   = false;
-  let timerInterval = null;
-  let seconds       = 0;
-  let currentBlob   = null;
-  let mimeType      = 'audio/webm';
-
-  // 지원 포맷 탐색
-  const MIME_TYPES = ['audio/webm;codecs=opus','audio/webm','audio/ogg;codecs=opus','audio/mp4'];
-  for (const t of MIME_TYPES) {
-    if (MediaRecorder.isTypeSupported(t)) { mimeType = t; break; }
+  // 학교명 초기화
+  const schoolLabel = document.getElementById('schoolLabel');
+  const schoolCard  = document.getElementById('schoolCard');
+  if (SCHOOL) {
+    schoolLabel.textContent = SCHOOL;
+  } else {
+    schoolCard.style.display = 'block';
+    schoolLabel.textContent  = '졸업앨범 음성 녹음';
   }
 
-  function pad(n) { return String(n).padStart(2,'0'); }
+  let recorder = null, chunks = [], isRec = false;
+  let timerInterval = null, secs = 0, blob = null;
+  let mimeType = 'audio/webm';
 
-  function updateTimer() {
-    seconds++;
-    const m = Math.floor(seconds / 60);
-    const s = seconds % 60;
-    document.getElementById('timer').textContent = pad(m) + ':' + pad(s);
+  const MIMES = ['audio/webm;codecs=opus','audio/webm','audio/ogg;codecs=opus','audio/mp4'];
+  for (const m of MIMES) { if (MediaRecorder.isTypeSupported(m)) { mimeType = m; break; } }
+
+  const $ = id => document.getElementById(id);
+  const pad = n => String(n).padStart(2,'0');
+
+  function tick() {
+    secs++;
+    $('timer').textContent = pad(Math.floor(secs/60))+':'+pad(secs%60);
   }
 
   async function toggleRecord() {
-    if (!isRecording) {
+    if (!isRec) {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        audioChunks = [];
-        mediaRecorder = new MediaRecorder(stream, { mimeType });
-        mediaRecorder.ondataavailable = e => { if (e.data.size > 0) audioChunks.push(e.data); };
-        mediaRecorder.onstop = () => {
-          currentBlob = new Blob(audioChunks, { type: mimeType });
-          const url = URL.createObjectURL(currentBlob);
-          const player = document.getElementById('previewPlayer');
-          player.src = url;
-          player.style.display = 'block';
-          document.getElementById('retryBtn').disabled = false;
-          document.getElementById('saveBtn').disabled  = false;
+        chunks = [];
+        recorder = new MediaRecorder(stream, { mimeType });
+        recorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
+        recorder.onstop = () => {
+          blob = new Blob(chunks, { type: mimeType });
+          $('preview').src = URL.createObjectURL(blob);
+          $('preview').style.display = 'block';
+          $('retryBtn').disabled = false;
+          $('saveBtn').disabled  = false;
           stream.getTracks().forEach(t => t.stop());
-          setStatus('녹음 완료 — 들어보고 저장하거나 다시 녹음하세요', false);
+          setStatus('녹음 완료 — 들어보고 마음에 들면 저장하세요');
         };
-        mediaRecorder.start(100);
-        isRecording = true;
-        seconds = 0;
-        document.getElementById('timer').textContent = '00:00';
-        document.getElementById('timer').className = 'timer recording';
-        timerInterval = setInterval(updateTimer, 1000);
-        document.getElementById('recBtn').className = 'rec-btn recording';
-        document.getElementById('recIcon').textContent = '⏹';
-        document.getElementById('waveform').className = 'waveform recording';
-        document.getElementById('previewPlayer').style.display = 'none';
-        document.getElementById('retryBtn').disabled = true;
-        document.getElementById('saveBtn').disabled  = true;
-        hideAlerts();
-        setStatus('녹음 중…', true);
-      } catch (e) {
-        setError('마이크 권한이 필요합니다.<br>브라우저에서 마이크 사용을 허용해 주세요.');
+        recorder.start(100);
+        isRec = true; secs = 0;
+        $('timer').textContent = '00:00';
+        $('timer').className = 'timer rec';
+        timerInterval = setInterval(tick, 1000);
+        $('recBtn').className = 'rec-btn recording';
+        $('recBtn').textContent = '⏹';
+        $('wave').className = 'waveform recording';
+        $('preview').style.display = 'none';
+        $('retryBtn').disabled = true;
+        $('saveBtn').disabled  = true;
+        clearAlerts();
+        setStatus('녹음 중… 다시 누르면 정지됩니다');
+      } catch {
+        showErr('마이크 권한이 필요합니다.<br>브라우저에서 마이크 사용을 허용해 주세요.');
       }
     } else {
-      stopRecording();
+      stopRec();
     }
   }
 
-  function stopRecording() {
-    if (!isRecording) return;
-    mediaRecorder.stop();
-    isRecording = false;
+  function stopRec() {
+    if (!isRec) return;
+    recorder.stop(); isRec = false;
     clearInterval(timerInterval);
-    document.getElementById('recBtn').className = 'rec-btn';
-    document.getElementById('recIcon').textContent = '⏺';
-    document.getElementById('timer').className = 'timer';
-    document.getElementById('waveform').className = 'waveform';
+    $('recBtn').className = 'rec-btn';
+    $('recBtn').textContent = '⏺';
+    $('timer').className = 'timer';
+    $('wave').className = 'waveform';
   }
 
-  function retryRecord() {
-    currentBlob = null;
-    document.getElementById('previewPlayer').style.display = 'none';
-    document.getElementById('previewPlayer').src = '';
-    document.getElementById('retryBtn').disabled = true;
-    document.getElementById('saveBtn').disabled  = true;
-    document.getElementById('timer').textContent = '00:00';
-    hideAlerts();
+  function retry() {
+    blob = null;
+    $('preview').style.display = 'none';
+    $('preview').src = '';
+    $('retryBtn').disabled = true;
+    $('saveBtn').disabled  = true;
+    $('timer').textContent = '00:00';
+    clearAlerts();
     setStatus('버튼을 눌러 다시 녹음하세요');
   }
 
-  async function saveRecording() {
-    const name  = document.getElementById('inputName').value.trim();
-    const cls   = document.getElementById('inputClass').value.trim();
+  async function save() {
+    const school    = SCHOOL || $('inputSchool').value.trim();
+    const name      = $('inputName').value.trim();
+    const className = $('inputClass').value.trim();
+    if (!school)    return showErr('학교 이름을 입력해 주세요.');
+    if (!name)      return showErr('이름을 입력해 주세요.');
+    if (!className) return showErr('학반 정보를 입력해 주세요.');
+    if (!blob)      return showErr('먼저 녹음을 완료해 주세요.');
 
-    if (!name)        return setError('이름을 입력해 주세요.');
-    if (!cls)         return setError('학반 정보를 입력해 주세요.');
-    if (!currentBlob) return setError('먼저 녹음을 완료해 주세요.');
-
-    // 파일 확장자 결정
-    const ext  = mimeType.includes('mp4') ? 'm4a' : mimeType.includes('ogg') ? 'ogg' : 'webm';
-    const fileName = name + '.' + ext;
-    const path = CONFIG.audioFolder + '/' + fileName;
-
-    hideAlerts();
-    document.getElementById('alertLoading').style.display = 'block';
-    document.getElementById('saveBtn').disabled  = true;
-    document.getElementById('retryBtn').disabled = true;
+    clearAlerts();
+    $('alertLoad').style.display = 'block';
+    $('saveBtn').disabled  = true;
+    $('retryBtn').disabled = true;
 
     try {
-      // Blob → Base64
-      const base64 = await blobToBase64(currentBlob);
-
-      // 기존 파일 SHA 확인 (덮어쓰기 위해 필요)
-      let sha = null;
-      try {
-        const checkRes = await fetch(
-          `https://api.github.com/repos/${CONFIG.githubOwner}/${CONFIG.githubRepo}/contents/${path}`,
-          { headers: { Authorization: 'token ' + CONFIG.githubToken } }
-        );
-        if (checkRes.ok) {
-          const checkData = await checkRes.json();
-          sha = checkData.sha;
-        }
-      } catch (_) {}
-
-      // GitHub API 업로드
-      const body = {
-        message: `[녹음] ${name} (${cls})`,
-        content: base64,
-        ...(sha ? { sha } : {})
-      };
-
-      const res = await fetch(
-        `https://api.github.com/repos/${CONFIG.githubOwner}/${CONFIG.githubRepo}/contents/${path}`,
-        {
-          method: 'PUT',
-          headers: {
-            Authorization: 'token ' + CONFIG.githubToken,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(body)
-        }
-      );
-
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.message || '업로드 실패');
+      const base64 = await toBase64(blob);
+      const res = await fetch(GAS_URL, {
+        method:  'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body:    JSON.stringify({ school, name, className, audioBase64: base64, mimeType }),
+        redirect:'follow'
+      });
+      const data = await res.json();
+      $('alertLoad').style.display = 'none';
+      if (data.success) {
+        $('form').style.display = 'none';
+        $('doneTitle').textContent = name + '님의 목소리가 저장됐어요!';
+        $('done').style.display = 'block';
+      } else {
+        throw new Error(data.error || '업로드 실패');
       }
-
-      // 성공 화면
-      document.getElementById('alertLoading').style.display = 'none';
-      document.getElementById('recordForm').style.display = 'none';
-      document.getElementById('doneName').textContent = name + '님의 목소리가 저장됐어요!';
-      document.getElementById('doneScreen').style.display = 'block';
-
-    } catch (e) {
-      document.getElementById('alertLoading').style.display = 'none';
-      document.getElementById('saveBtn').disabled  = false;
-      document.getElementById('retryBtn').disabled = false;
-      setError('업로드 중 오류가 발생했어요.<br>' + (e.message || '') + '<br>잠시 후 다시 시도해 주세요.');
+    } catch (err) {
+      $('alertLoad').style.display = 'none';
+      $('saveBtn').disabled  = false;
+      $('retryBtn').disabled = false;
+      showErr('저장 중 오류가 발생했어요.<br>' + err.message + '<br>잠시 후 다시 시도해 주세요.');
     }
   }
 
-  function blobToBase64(blob) {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload  = () => resolve(reader.result.split(',')[1]);
-      reader.onerror = reject;
-      reader.readAsDataURL(blob);
+  function toBase64(b) {
+    return new Promise((res, rej) => {
+      const r = new FileReader();
+      r.onload  = () => res(r.result.split(',')[1]);
+      r.onerror = rej;
+      r.readAsDataURL(b);
     });
   }
 
-  function resetForm() {
-    currentBlob = null;
-    seconds = 0;
-    document.getElementById('inputName').value  = '';
-    document.getElementById('inputClass').value = '';
-    document.getElementById('timer').textContent = '00:00';
-    document.getElementById('previewPlayer').style.display = 'none';
-    document.getElementById('previewPlayer').src = '';
-    document.getElementById('retryBtn').disabled = true;
-    document.getElementById('saveBtn').disabled  = true;
-    document.getElementById('waveform').className = 'waveform';
-    hideAlerts();
+  function reset() {
+    blob = null; secs = 0;
+    ['inputName','inputClass'].forEach(id => $(id) && ($(id).value = ''));
+    if ($('inputSchool')) $('inputSchool').value = '';
+    $('timer').textContent = '00:00';
+    $('preview').style.display = 'none';
+    $('preview').src = '';
+    $('retryBtn').disabled = true;
+    $('saveBtn').disabled  = true;
+    $('wave').className = 'waveform';
+    clearAlerts();
     setStatus('버튼을 눌러 녹음을 시작하세요');
-    document.getElementById('doneScreen').style.display = 'none';
-    document.getElementById('recordForm').style.display  = 'block';
+    $('done').style.display = 'none';
+    $('form').style.display = 'block';
   }
 
-  function setStatus(msg) {
-    document.getElementById('statusMsg').textContent = msg;
-  }
-
-  function setError(msg) {
-    const el = document.getElementById('alertError');
-    el.innerHTML = msg;
-    el.style.display = 'block';
-  }
-
-  function hideAlerts() {
-    ['alertError','alertSuccess','alertLoading'].forEach(id => {
-      document.getElementById(id).style.display = 'none';
-    });
-  }
+  function setStatus(msg) { $('status').textContent = msg; }
+  function showErr(msg)   { $('alertErr').innerHTML = msg; $('alertErr').style.display = 'block'; }
+  function clearAlerts()  { ['alertErr','alertLoad'].forEach(id => $(id).style.display = 'none'); }
 </script>
 </body>
 </html>
