@@ -40,13 +40,13 @@ select option{background:#1a1814}
 .btn-primary{background:#231f16;border-color:var(--gold-dim);color:var(--gold)}
 .btn-primary:hover:not(:disabled){background:#2a2415;border-color:var(--gold)}
 .btn-ghost:hover:not(:disabled){background:#1e1c18}
+.btn-warn{border-color:#3d2020;color:var(--red)}
+.btn-warn:hover:not(:disabled){background:var(--red-bg)}
 .alert{border-radius:10px;padding:.875rem 1.25rem;font-size:13px;line-height:1.8;margin-top:1rem;display:none}
 .alert.err{background:var(--red-bg);border:1px solid var(--red-border);color:var(--red)}
 .alert.ok{background:var(--green-bg);border:1px solid var(--green-border);color:var(--green)}
 .spin{display:inline-block;width:13px;height:13px;border:2px solid var(--faint);border-top-color:var(--gold);border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:6px}
 @keyframes spin{to{transform:rotate(360deg)}}
-
-/* 학생 그리드 */
 .stats{display:flex;gap:1rem;margin-bottom:1.5rem;flex-wrap:wrap}
 .stat{background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:.875rem 1.25rem;min-width:120px}
 .stat-val{font-size:24px;font-weight:500;margin-bottom:2px}
@@ -55,9 +55,10 @@ select option{background:#1a1814}
 .qr-card{background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:1.25rem;text-align:center;transition:border-color .2s}
 .qr-card:hover{border-color:var(--gold-dim)}
 .qr-box{background:#fff;border-radius:8px;padding:8px;display:inline-block;margin-bottom:.875rem}
-.qr-box canvas,.qr-box img{display:block}
-.qr-name{font-size:14px;font-weight:500;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.qr-no-id{background:var(--red-bg);border:1px solid var(--red-border);border-radius:8px;padding:.75rem;font-size:11px;color:var(--red);margin-bottom:.875rem}
+.qr-name{font-size:14px;font-weight:500;margin-bottom:3px}
 .qr-cls{font-size:11px;color:var(--muted)}
+.qr-id{font-size:10px;color:var(--faint);margin-top:4px;font-family:monospace}
 .empty{text-align:center;padding:3rem;color:var(--muted);font-size:14px;grid-column:1/-1}
 footer{margin-top:3rem;font-size:11px;color:var(--faint);letter-spacing:2px;text-align:center}
 </style>
@@ -80,19 +81,21 @@ footer{margin-top:3rem;font-size:11px;color:var(--faint);letter-spacing:2px;text
     </div>
     <div class="field">
       <span class="lbl">GitHub Pages 기본 URL</span>
-      <input id="pagesUrl" type="text" placeholder="https://anosenstudio.github.io/2025-album" />
+      <input id="pagesUrl" type="text" placeholder="https://anosenstudio.github.io/2026-album" />
     </div>
     <div class="btn-row">
       <button class="btn btn-primary" onclick="loadSchools()">학교 목록 불러오기</button>
       <button class="btn btn-ghost"   onclick="saveSettings()">설정 저장</button>
+      <button class="btn btn-warn"    onclick="assignIds()">기존 녹음 ID 할당</button>
     </div>
     <div class="alert err" id="settingsErr"></div>
+    <div class="alert ok"  id="settingsOk"></div>
   </div>
 
   <!-- 학교 선택 -->
   <div class="card">
     <div class="card-title">학교 선택</div>
-    <div class="field">
+    <div class="field" style="margin-bottom:0">
       <select id="schoolSelect" onchange="loadStudents()">
         <option value="">-- 먼저 학교 목록을 불러오세요 --</option>
       </select>
@@ -102,7 +105,7 @@ footer{margin-top:3rem;font-size:11px;color:var(--faint);letter-spacing:2px;text
     </div>
   </div>
 
-  <!-- 통계 + QR 그리드 -->
+  <!-- QR 그리드 -->
   <div id="resultSection" style="display:none">
     <div class="stats">
       <div class="stat">
@@ -110,19 +113,15 @@ footer{margin-top:3rem;font-size:11px;color:var(--faint);letter-spacing:2px;text
         <div class="stat-lbl">녹음 완료</div>
       </div>
       <div class="stat">
-        <div class="stat-val" id="statSchool">—</div>
+        <div class="stat-val" id="statSchool" style="font-size:15px;padding-top:6px">—</div>
         <div class="stat-lbl">학교</div>
       </div>
     </div>
-
     <div class="btn-row" style="margin-bottom:1.25rem">
       <button class="btn btn-primary" id="dlBtn" onclick="downloadZip()">QR 전체 ZIP 다운로드</button>
       <button class="btn btn-ghost"   onclick="loadStudents()">새로고침</button>
     </div>
-
-    <div class="qr-grid" id="qrGrid">
-      <div class="empty">학교를 선택하면 학생 목록이 표시됩니다</div>
-    </div>
+    <div class="qr-grid" id="qrGrid"></div>
   </div>
 
   <footer>졸업앨범 음성 QR 관리 시스템</footer>
@@ -131,7 +130,6 @@ footer{margin-top:3rem;font-size:11px;color:var(--faint);letter-spacing:2px;text
 <script>
   let students = [];
 
-  // 설정 불러오기 (localStorage)
   window.onload = () => {
     document.getElementById('gasUrl').value   = localStorage.getItem('gasUrl')   || '';
     document.getElementById('pagesUrl').value = localStorage.getItem('pagesUrl') || '';
@@ -140,7 +138,7 @@ footer{margin-top:3rem;font-size:11px;color:var(--faint);letter-spacing:2px;text
   function saveSettings() {
     localStorage.setItem('gasUrl',   document.getElementById('gasUrl').value.trim());
     localStorage.setItem('pagesUrl', document.getElementById('pagesUrl').value.trim());
-    alert('설정이 저장됐습니다.');
+    showMsg('settingsOk', '설정이 저장됐습니다.');
   }
 
   function getGasUrl()   { return document.getElementById('gasUrl').value.trim(); }
@@ -148,7 +146,7 @@ footer{margin-top:3rem;font-size:11px;color:var(--faint);letter-spacing:2px;text
 
   async function loadSchools() {
     const url = getGasUrl();
-    if (!url) return showErr('settingsErr', 'GAS URL을 입력하세요.');
+    if (!url) return showMsg('settingsErr', 'GAS URL을 입력하세요.');
     try {
       const res  = await fetch(url + '?action=schools');
       const data = await res.json();
@@ -157,7 +155,7 @@ footer{margin-top:3rem;font-size:11px;color:var(--faint);letter-spacing:2px;text
         data.schools.map(s => `<option value="${s}">${s}</option>`).join('');
       document.getElementById('settingsErr').style.display = 'none';
     } catch {
-      showErr('settingsErr', '학교 목록을 불러올 수 없습니다. GAS URL을 확인하세요.');
+      showMsg('settingsErr', '학교 목록을 불러올 수 없습니다. GAS URL을 확인하세요.');
     }
   }
 
@@ -169,26 +167,24 @@ footer{margin-top:3rem;font-size:11px;color:var(--faint);letter-spacing:2px;text
     try {
       const res  = await fetch(getGasUrl() + '?action=list&school=' + encodeURIComponent(school));
       const data = await res.json();
-      students = data.students || [];
+      students   = data.students || [];
       document.getElementById('loadingStudents').style.display = 'none';
       document.getElementById('resultSection').style.display   = 'block';
       document.getElementById('statCount').textContent  = students.length;
       document.getElementById('statSchool').textContent = school;
-      renderGrid();
+      renderGrid(school);
     } catch {
       document.getElementById('loadingStudents').style.display = 'none';
       alert('학생 목록을 불러오는 데 실패했습니다.');
     }
   }
 
+  // QR URL: 짧은 ID만 사용 → 단순한 QR 패턴
   function makeUrl(s) {
-    const base = getPagesUrl();
-    return base + '/play.html?student=' + encodeURIComponent(s.name) +
-           '&class=' + encodeURIComponent(s.className) +
-           '&fileId=' + encodeURIComponent(s.fileId);
+    return getPagesUrl() + '/play.html?id=' + s.shortId;
   }
 
-  function renderGrid() {
+  function renderGrid(school) {
     const grid = document.getElementById('qrGrid');
     if (!students.length) {
       grid.innerHTML = '<div class="empty">녹음된 학생이 없습니다</div>';
@@ -196,63 +192,84 @@ footer{margin-top:3rem;font-size:11px;color:var(--faint);letter-spacing:2px;text
     }
     grid.innerHTML = students.map((s, i) => `
       <div class="qr-card">
-        <div class="qr-box" id="qr-box-${i}"></div>
+        ${s.shortId
+          ? `<div class="qr-box" id="qr-box-${i}"></div>`
+          : `<div class="qr-no-id">ID 없음<br>기존 녹음 ID 할당 버튼을 눌러주세요</div>`
+        }
         <div class="qr-name">${s.name}</div>
         <div class="qr-cls">${s.className}</div>
+        ${s.shortId ? `<div class="qr-id">ID: ${s.shortId}</div>` : ''}
       </div>
     `).join('');
 
-    // QR 생성
+    // QR 생성 — CorrectLevel.L (가장 낮은 오류정정 = 가장 단순한 패턴)
     students.forEach((s, i) => {
+      if (!s.shortId) return;
       new QRCode(document.getElementById('qr-box-' + i), {
-        text:          makeUrl(s),
-        width:         160,
-        height:        160,
-        colorDark:     '#000000',
-        colorLight:    '#ffffff',
-        correctLevel:  QRCode.CorrectLevel.M
+        text:         makeUrl(s),
+        width:        160,
+        height:       160,
+        colorDark:    '#000000',
+        colorLight:   '#ffffff',
+        correctLevel: QRCode.CorrectLevel.L   // ← 가장 단순한 패턴
       });
     });
   }
 
   async function downloadZip() {
     if (!students.length) return alert('학생 데이터가 없습니다.');
-    const btn = document.getElementById('dlBtn');
+    const school = document.getElementById('schoolSelect').value;
+    const btn    = document.getElementById('dlBtn');
     btn.disabled = true;
     btn.innerHTML = '<span class="spin"></span>ZIP 생성 중…';
 
-    const zip = new JSZip();
-    const school = document.getElementById('schoolSelect').value;
-
-    // 각 QR 카드의 캔버스를 PNG로 변환하여 ZIP에 추가
+    const zip   = new JSZip();
     const tasks = students.map((s, i) => new Promise(resolve => {
-      // QRCode.js 는 내부에 canvas 를 생성함
+      if (!s.shortId) return resolve();
       const box    = document.getElementById('qr-box-' + i);
-      const canvas = box.querySelector('canvas');
+      const canvas = box && box.querySelector('canvas');
       if (!canvas) return resolve();
       canvas.toBlob(blob => {
-        const filename = s.name + '_' + s.className + '.png';
-        zip.file(filename, blob);
+        // 파일명에 학교명 포함
+        const fname = school + '_' + s.name + '_' + s.className + '.png';
+        zip.file(fname, blob);
         resolve();
       }, 'image/png');
     }));
 
     await Promise.all(tasks);
 
-    // 학생 목록 CSV도 함께 포함
-    const csvRows = [['이름','학반','파일ID','QR URL']];
-    students.forEach(s => csvRows.push([s.name, s.className, s.fileId, makeUrl(s)]));
-    const csvContent = '\uFEFF' + csvRows.map(r => r.join(',')).join('\n'); // BOM for Excel
-    zip.file('학생목록.csv', csvContent);
+    // CSV 포함
+    const csvRows = [['학교','이름','학반','ID','QR URL']];
+    students.forEach(s => {
+      if (s.shortId) csvRows.push([school, s.name, s.className, s.shortId, makeUrl(s)]);
+    });
+    zip.file('학생목록.csv', '\uFEFF' + csvRows.map(r => r.join(',')).join('\n'));
 
-    const zipBlob = await zip.generateAsync({ type: 'blob' });
-    saveAs(zipBlob, school + '_QR코드.zip');
+    const blob = await zip.generateAsync({ type: 'blob' });
+    saveAs(blob, school + '_QR코드.zip');
 
     btn.disabled = false;
     btn.textContent = 'QR 전체 ZIP 다운로드';
   }
 
-  function showErr(id, msg) {
+  async function assignIds() {
+    const url = getGasUrl();
+    if (!url) return alert('GAS URL을 먼저 입력하세요.');
+    if (!confirm('기존 녹음 중 ID가 없는 항목에 새 ID를 부여합니다. 계속할까요?')) return;
+    try {
+      const res  = await fetch(url + '?action=assignIds');
+      const data = await res.json();
+      if (data.success) {
+        showMsg('settingsOk', data.assigned + '개 항목에 ID가 부여됐습니다. 학생 목록을 다시 불러오세요.');
+        loadStudents();
+      }
+    } catch {
+      showMsg('settingsErr', 'ID 할당 중 오류가 발생했습니다.');
+    }
+  }
+
+  function showMsg(id, msg) {
     const el = document.getElementById(id);
     el.textContent = msg;
     el.style.display = 'block';
