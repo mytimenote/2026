@@ -54,8 +54,7 @@ body{
 
 .play-btn{
   width:64px;height:64px;border-radius:50%;
-  border:1.5px solid var(--border);
-  background:var(--bg-card);color:var(--gold);
+  border:1.5px solid var(--border);background:var(--bg-card);color:var(--gold);
   font-size:20px;cursor:pointer;
   display:flex;align-items:center;justify-content:center;
   margin:0 auto 1.25rem;
@@ -76,6 +75,23 @@ body{
 .spin{display:inline-block;width:28px;height:28px;border:2px solid var(--border);border-top-color:var(--gold);border-radius:50%;animation:spin .8s linear infinite}
 .load-txt{font-size:12px;color:var(--muted);margin-top:.75rem;letter-spacing:.5px}
 
+/* ── 뒤로가기 버튼 ── */
+.back-btn{
+  display:inline-flex;align-items:center;gap:6px;
+  margin-top:1.5rem;
+  padding:9px 20px;border-radius:99px;
+  border:1.5px solid var(--border);
+  background:var(--bg-card);
+  color:var(--muted);
+  font-size:12px;font-family:'Noto Sans KR',sans-serif;
+  font-weight:400;cursor:pointer;
+  transition:border-color .2s,color .2s,box-shadow .2s;
+  box-shadow:0 1px 6px rgba(154,111,63,.06);
+  text-decoration:none;
+}
+.back-btn:hover{border-color:var(--faint);color:var(--text-sub);box-shadow:0 3px 12px rgba(154,111,63,.1)}
+.back-btn:active{transform:scale(.97)}
+
 /* ── 완료 화면 ── */
 .done-wrap{display:none;text-align:center;animation:fadeIn .6s ease both}
 .done-icon{font-size:58px;display:block;margin-bottom:1.5rem;animation:bloom .6s cubic-bezier(.22,1,.36,1) both}
@@ -86,8 +102,7 @@ body{
 .replay-btn{
   display:inline-flex;align-items:center;gap:8px;
   padding:10px 24px;border-radius:99px;
-  border:1.5px solid var(--border);
-  background:var(--bg-card);color:var(--text-sub);
+  border:1.5px solid var(--border);background:var(--bg-card);color:var(--text-sub);
   font-size:13px;font-family:'Noto Sans KR',sans-serif;font-weight:500;cursor:pointer;
   transition:border-color .2s,color .2s,box-shadow .2s;
   box-shadow:0 2px 8px rgba(154,111,63,.08);
@@ -136,7 +151,11 @@ body{
     <audio id="player"></audio>
 
     <div class="hint" id="hintMsg"></div>
-    <div class="foot">졸업앨범 음성 메시지</div>
+
+    <!-- 뒤로가기 버튼 -->
+    <button class="back-btn" onclick="goBack()">← 뒤로가기</button>
+
+    <div class="foot">늘스튜디오</div>
   </div>
 
   <!-- 완료 화면 -->
@@ -147,10 +166,11 @@ body{
     <div class="done-msg" id="doneMsg"></div>
     <div class="done-divider"></div>
     <button class="replay-btn" onclick="replayAudio()">▶&nbsp;&nbsp;다시 듣기</button>
-    <div class="foot" style="margin-top:2rem">졸업앨범 음성 메시지</div>
+    <div class="foot" style="margin-top:2rem">늘스튜디오</div>
   </div>
 
 </div>
+
 <script>
   const GAS_URL = 'https://script.google.com/macros/s/AKfycbxCIUMBHvu0YU77z4ULqrZAez6bue3cWi7Fzyg5slz-FdIY05K1EclHCRDUdcBoxXbPuQ/exec';
 
@@ -220,7 +240,6 @@ body{
     playBtn.disabled = true;
   });
 
-  // 재생 끝 → 완료 화면 전환
   player.addEventListener('ended', () => {
     wave.className = 'waveform';
     playBtn.textContent = '▶';
@@ -244,6 +263,15 @@ body{
     progressBar.style.width  = '0%';
     player.currentTime = 0;
     player.play();
+  }
+
+  // 뒤로가기 — 히스토리가 있으면 뒤로, 없으면 창 닫기 시도
+  function goBack() {
+    if (history.length > 1) {
+      history.back();
+    } else {
+      window.close();
+    }
   }
 
   player.addEventListener('play',  () => { wave.className='waveform playing'; playBtn.textContent='■'; });

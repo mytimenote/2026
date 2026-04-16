@@ -27,8 +27,6 @@
   --green-bg:#f2faf5;
   --green-border:#b8ddc8;
   --orange:#b07030;
-  --orange-bg:#fdf6ee;
-  --orange-border:#e8d0a8;
 }
 body{
   min-height:100vh;
@@ -92,8 +90,6 @@ select{
 select:focus{border-color:var(--gold-light);box-shadow:0 0 0 3px rgba(201,169,110,.1)}
 select option{background:var(--bg-card)}
 
-/* ── 타이머 영역 ── */
-.timer-wrap{position:relative;margin-bottom:.35rem}
 .timer{
   text-align:center;font-size:40px;font-weight:500;
   font-variant-numeric:tabular-nums;letter-spacing:3px;
@@ -102,24 +98,12 @@ select option{background:var(--bg-card)}
 .timer.rec{color:var(--red)}
 .timer.warn{color:var(--orange);animation:urgentPulse .8s ease-in-out infinite}
 
-/* ── 진행바 (녹음 시간) ── */
-.rec-progress{
-  width:100%;height:4px;background:var(--border-light);
-  border-radius:99px;margin:.75rem 0 .25rem;overflow:hidden;
-}
-.rec-progress-bar{
-  height:100%;width:0%;border-radius:99px;
-  background:linear-gradient(to right,var(--gold-light),var(--gold));
-  transition:width .5s linear, background .5s;
-}
+.rec-progress{width:100%;height:4px;background:var(--border-light);border-radius:99px;margin:.75rem 0 .25rem;overflow:hidden}
+.rec-progress-bar{height:100%;width:0%;border-radius:99px;background:linear-gradient(to right,var(--gold-light),var(--gold));transition:width .5s linear,background .5s}
 .rec-progress-bar.warn{background:linear-gradient(to right,#e8a84a,var(--orange))}
 .rec-progress-bar.danger{background:linear-gradient(to right,#e06060,var(--red))}
 
-/* ── 남은 시간 표시 ── */
-.time-info{
-  display:flex;justify-content:space-between;align-items:center;
-  font-size:11px;color:var(--muted);margin-bottom:1.5rem;letter-spacing:.5px;
-}
+.time-info{display:flex;justify-content:space-between;align-items:center;font-size:11px;color:var(--muted);margin-bottom:1.5rem;letter-spacing:.5px}
 .time-remaining{font-weight:500;transition:color .3s}
 .time-remaining.warn{color:var(--orange)}
 .time-remaining.danger{color:var(--red)}
@@ -169,7 +153,7 @@ select option{background:var(--bg-card)}
 .done .icon{font-size:58px;margin-bottom:1.25rem;display:block;animation:bloom .6s cubic-bezier(.22,1,.36,1) both}
 .done .title{font-family:'Noto Serif KR',serif;font-size:20px;font-weight:700;color:var(--text);margin-bottom:.6rem}
 .done-divider{width:40px;height:1px;background:var(--faint);margin:1.5rem auto}
-.done .msg{font-size:13px;color:var(--text-sub);line-height:2.1}
+.done .msg{font-size:13px;color:var(--text-sub);line-height:2.2}
 
 footer{text-align:center;font-size:10px;color:var(--faint);letter-spacing:2px;margin-top:2rem}
 </style>
@@ -178,10 +162,10 @@ footer{text-align:center;font-size:10px;color:var(--faint);letter-spacing:2px;ma
 <div class="wrap">
 
   <script>
-    const GAS_URL   = 'https://script.google.com/macros/s/AKfycbxCIUMBHvu0YU77z4ULqrZAez6bue3cWi7Fzyg5slz-FdIY05K1EclHCRDUdcBoxXbPuQ/exec';
-    const MAX_SEC   = 40; // ← 최대 녹음 시간(초) — 여기서 변경
-    const params    = new URLSearchParams(location.search);
-    const SCHOOL    = decodeURIComponent(params.get('school') || '');
+    const GAS_URL = 'https://script.google.com/macros/s/AKfycbxCIUMBHvu0YU77z4ULqrZAez6bue3cWi7Fzyg5slz-FdIY05K1EclHCRDUdcBoxXbPuQ/exec';
+    const MAX_SEC = 40;
+    const params  = new URLSearchParams(location.search);
+    const SCHOOL  = decodeURIComponent(params.get('school') || '');
   </script>
 
   <div class="deco-line"><span></span><i>✦</i><span></span></div>
@@ -222,20 +206,12 @@ footer{text-align:center;font-size:10px;color:var(--faint);letter-spacing:2px;ma
     </div>
 
     <div class="card">
-      <!-- 타이머 -->
       <div class="timer" id="timer">00:00</div>
-
-      <!-- 진행바 -->
-      <div class="rec-progress">
-        <div class="rec-progress-bar" id="recBar"></div>
-      </div>
-
-      <!-- 경과 / 남은 시간 -->
+      <div class="rec-progress"><div class="rec-progress-bar" id="recBar"></div></div>
       <div class="time-info">
         <span id="elapsedLbl">0초</span>
         <span class="time-remaining" id="remainLbl">40초 남음</span>
       </div>
-
       <div class="status" id="status">버튼을 눌러 녹음을 시작하세요</div>
 
       <button class="rec-btn" id="recBtn" onclick="toggleRecord()">⏺</button>
@@ -284,13 +260,13 @@ footer{text-align:center;font-size:10px;color:var(--faint);letter-spacing:2px;ma
     <div class="title" id="doneTitle"></div>
     <div class="done-divider"></div>
     <div class="msg">
-      녹음이 저장됐어요!<br>
+      졸업을 축하해요.<br>
       졸업앨범 QR코드를 스캔하면<br>
       이 목소리를 들을 수 있답니다 🎓
     </div>
   </div>
 
-  <footer>졸업앨범 음성 녹음 시스템</footer>
+  <footer>늘스튜디오</footer>
 </div>
 
 <script>
@@ -307,46 +283,29 @@ footer{text-align:center;font-size:10px;color:var(--faint);letter-spacing:2px;ma
   let timerInterval = null, secs = 0, blob = null;
   let mimeType = 'audio/webm';
 
-  // 32kbps 비트레이트 우선 — 지원 안 하면 기본값
-  const MIMES = [
-    'audio/webm;codecs=opus',
-    'audio/webm',
-    'audio/ogg;codecs=opus',
-    'audio/mp4'
-  ];
-  for (const m of MIMES) {
-    if (MediaRecorder.isTypeSupported(m)) { mimeType = m; break; }
-  }
+  const MIMES = ['audio/webm;codecs=opus','audio/webm','audio/ogg;codecs=opus','audio/mp4'];
+  for (const m of MIMES) { if (MediaRecorder.isTypeSupported(m)) { mimeType = m; break; } }
 
   const $ = id => document.getElementById(id);
   const pad = n => String(n).padStart(2, '0');
 
-  // ── 타이머 / 진행바 업데이트 ──
   function tick() {
     secs++;
     const remain = MAX_SEC - secs;
     const pct    = (secs / MAX_SEC) * 100;
-
-    // 타이머 숫자
-    $('timer').textContent = pad(Math.floor(secs / 60)) + ':' + pad(secs % 60);
-
-    // 경과 / 남은 시간 텍스트
+    $('timer').textContent    = pad(Math.floor(secs / 60)) + ':' + pad(secs % 60);
     $('elapsedLbl').textContent = secs + '초';
     $('remainLbl').textContent  = remain + '초 남음';
-
-    // 진행바 색상 단계
     const bar = $('recBar');
     bar.style.width = pct + '%';
     if (remain <= 5) {
       bar.className = 'rec-progress-bar danger';
-      $('timer').className   = 'timer rec warn';
+      $('timer').className     = 'timer rec warn';
       $('remainLbl').className = 'time-remaining danger';
     } else if (remain <= 10) {
       bar.className = 'rec-progress-bar warn';
       $('remainLbl').className = 'time-remaining warn';
     }
-
-    // 40초 도달 시 자동 정지
     if (secs >= MAX_SEC) {
       stopRec();
       setStatus('40초 제한에 도달해 자동으로 정지됐습니다');
@@ -354,13 +313,13 @@ footer{text-align:center;font-size:10px;color:var(--faint);letter-spacing:2px;ma
   }
 
   function resetTimerUI() {
-    $('timer').textContent     = '00:00';
-    $('timer').className       = 'timer';
+    $('timer').textContent      = '00:00';
+    $('timer').className        = 'timer';
     $('elapsedLbl').textContent = '0초';
     $('remainLbl').textContent  = MAX_SEC + '초 남음';
     $('remainLbl').className    = 'time-remaining';
-    $('recBar').style.width    = '0%';
-    $('recBar').className      = 'rec-progress-bar';
+    $('recBar').style.width     = '0%';
+    $('recBar').className       = 'rec-progress-bar';
   }
 
   function getClassName() {
@@ -375,15 +334,9 @@ footer{text-align:center;font-size:10px;color:var(--faint);letter-spacing:2px;ma
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         chunks = [];
-
-        // 32kbps 비트레이트 적용
         const options = { mimeType, audioBitsPerSecond: 32000 };
-        try {
-          recorder = new MediaRecorder(stream, options);
-        } catch {
-          recorder = new MediaRecorder(stream, { mimeType });
-        }
-
+        try { recorder = new MediaRecorder(stream, options); }
+        catch { recorder = new MediaRecorder(stream, { mimeType }); }
         recorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
         recorder.onstop = () => {
           blob = new Blob(chunks, { type: mimeType });
@@ -393,7 +346,6 @@ footer{text-align:center;font-size:10px;color:var(--faint);letter-spacing:2px;ma
           $('saveBtn').disabled   = false;
           stream.getTracks().forEach(t => t.stop());
         };
-
         recorder.start(100);
         isRec = true; secs = 0;
         resetTimerUI();
