@@ -75,25 +75,14 @@ body{
 .spin{display:inline-block;width:28px;height:28px;border:2px solid var(--border);border-top-color:var(--gold);border-radius:50%;animation:spin .8s linear infinite}
 .load-txt{font-size:12px;color:var(--muted);margin-top:.75rem;letter-spacing:.5px}
 
-/* ── 뒤로가기 버튼 ── */
-.back-btn{
-  display:inline-flex;align-items:center;gap:6px;
-  margin-top:1.5rem;padding:9px 20px;border-radius:99px;
-  border:1.5px solid var(--border);background:var(--bg-card);
-  color:var(--muted);font-size:12px;font-family:'Noto Sans KR',sans-serif;
-  font-weight:400;cursor:pointer;
-  transition:border-color .2s,color .2s,box-shadow .2s;
-  box-shadow:0 1px 6px rgba(154,111,63,.06);
-}
-.back-btn:hover{border-color:var(--faint);color:var(--text-sub);box-shadow:0 3px 12px rgba(154,111,63,.1)}
-.back-btn:active{transform:scale(.97)}
-
 /* ── 완료 화면 ── */
 .done-wrap{display:none;text-align:center;animation:fadeIn .6s ease both}
 .done-icon{font-size:58px;display:block;margin-bottom:1.5rem;animation:bloom .6s cubic-bezier(.22,1,.36,1) both}
 .done-title{font-family:'Noto Serif KR',serif;font-size:20px;font-weight:700;color:var(--text);margin-bottom:.6rem}
 .done-msg{font-size:13px;color:var(--text-sub);line-height:2.1}
 .done-divider{width:40px;height:1px;background:var(--faint);margin:1.5rem auto}
+
+.btn-group{display:flex;flex-direction:column;align-items:center;gap:10px}
 
 .replay-btn{
   display:inline-flex;align-items:center;gap:8px;
@@ -102,9 +91,24 @@ body{
   font-size:13px;font-family:'Noto Sans KR',sans-serif;font-weight:500;cursor:pointer;
   transition:border-color .2s,color .2s,box-shadow .2s;
   box-shadow:0 2px 8px rgba(154,111,63,.08);
+  width:180px;justify-content:center;
 }
 .replay-btn:hover{border-color:var(--gold-light);color:var(--gold);box-shadow:0 4px 16px rgba(154,111,63,.15)}
 .replay-btn:active{transform:scale(.97)}
+
+/* ── 카톡 닫기 버튼 ── */
+.close-btn{
+  display:inline-flex;align-items:center;gap:8px;
+  padding:10px 24px;border-radius:99px;
+  border:1.5px solid var(--border-light);
+  background:transparent;
+  color:var(--faint);
+  font-size:12px;font-family:'Noto Sans KR',sans-serif;font-weight:400;cursor:pointer;
+  transition:border-color .2s,color .2s;
+  width:180px;justify-content:center;
+}
+.close-btn:hover{border-color:var(--faint);color:var(--muted)}
+.close-btn:active{transform:scale(.97)}
 
 footer{
   text-align:center;font-size:11px;color:var(--faint);
@@ -153,9 +157,7 @@ footer{
 
     <div class="hint" id="hintMsg"></div>
 
-    <button class="back-btn" onclick="goBack()">← 뒤로가기</button>
-
-    <footer>소중한 순간은 늘 여기에, 늘스튜디오.</footer>
+    <footer>소중한 순간은 늘 여기에 ㅣ 늘스튜디오</footer>
   </div>
 
   <!-- 완료 화면 -->
@@ -165,8 +167,11 @@ footer{
     <div class="done-title" id="doneTitle"></div>
     <div class="done-msg" id="doneMsg"></div>
     <div class="done-divider"></div>
-    <button class="replay-btn" onclick="replayAudio()">▶&nbsp;&nbsp;다시 듣기</button>
-    <footer style="margin-top:2rem">소중한 순간은 늘 여기에, 늘스튜디오.</footer>
+    <div class="btn-group">
+      <button class="replay-btn" onclick="replayAudio()">▶&nbsp;&nbsp;다시 듣기</button>
+      <button class="close-btn"  onclick="closeWindow()">✕&nbsp;&nbsp;창 닫기</button>
+    </div>
+    <footer style="margin-top:2rem">소중한 순간은 늘 여기에 ㅣ 늘스튜디오</footer>
   </div>
 
 </div>
@@ -265,9 +270,17 @@ footer{
     player.play();
   }
 
-  function goBack() {
-    if (history.length > 1) { history.back(); }
-    else { window.close(); }
+  // 카카오톡 인앱 브라우저에서 창 닫기
+  function closeWindow() {
+    // 카카오톡 웹뷰 전용 닫기
+    if (window.KakaoTalk) {
+      window.KakaoTalk.closeWindow();
+      return;
+    }
+    // 일반 window.close (카카오톡 인앱에서도 동작하는 경우 많음)
+    window.close();
+    // close가 막힌 경우 history back 시도
+    setTimeout(() => { history.back(); }, 300);
   }
 
   player.addEventListener('play',  () => { wave.className='waveform playing'; playBtn.textContent='■'; });
