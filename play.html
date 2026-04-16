@@ -25,12 +25,14 @@ body{min-height:100vh;display:flex;flex-direction:column;align-items:center;just
 .play-btn:hover{border-color:var(--gold);transform:scale(1.05)}
 .play-btn:active{transform:scale(.95)}
 .play-btn:disabled{opacity:.35;cursor:not-allowed;transform:none}
-.loading{font-size:13px;color:var(--muted);margin-bottom:1.5rem}
-.spin{display:inline-block;width:13px;height:13px;border:2px solid var(--faint);border-top-color:var(--gold);border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:8px}
+.hint{font-size:12px;color:var(--muted);letter-spacing:.5px;min-height:20px}
+.hint.err{color:#c96e6e;font-size:12px;line-height:1.8}
+.progress{width:100%;height:3px;background:var(--faint);border-radius:99px;margin-bottom:1.5rem;overflow:hidden;display:none}
+.progress-bar{height:100%;background:var(--gold);width:0%;transition:width .3s linear;border-radius:99px}
+.spin-wrap{margin-bottom:1.5rem}
+.spin{display:inline-block;width:28px;height:28px;border:2px solid var(--faint);border-top-color:var(--gold);border-radius:50%;animation:spin .8s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
-.hint{font-size:11px;color:var(--faint);letter-spacing:1px}
-.drive-link{display:inline-block;margin-top:1.5rem;padding:9px 20px;border:1px solid var(--border);border-radius:99px;font-size:12px;color:var(--muted);text-decoration:none;transition:border-color .2s,color .2s}
-.drive-link:hover{border-color:var(--gold);color:var(--gold)}
+.load-txt{font-size:12px;color:var(--muted);margin-top:.75rem}
 </style>
 </head>
 <body>
@@ -56,70 +58,96 @@ body{min-height:100vh;display:flex;flex-direction:column;align-items:center;just
     <div class="bar" style="animation-delay:.00s"></div>
   </div>
 
-  <div class="loading" id="loadingMsg" style="display:none">
-    <span class="spin"></span>음성을 불러오는 중…
+  <!-- 로딩 스피너 -->
+  <div class="spin-wrap" id="spinWrap">
+    <div class="spin"></div>
+    <div class="load-txt">음성을 불러오는 중…</div>
+  </div>
+
+  <!-- 재생 진행바 -->
+  <div class="progress" id="progressWrap">
+    <div class="progress-bar" id="progressBar"></div>
   </div>
 
   <button class="play-btn" id="playBtn" disabled onclick="togglePlay()">▶</button>
   <audio id="player"></audio>
 
-  <div class="hint" id="hintMsg">음성을 불러오는 중입니다</div>
-
-  <!-- Drive 직접 열기 (항상 표시 — 오디오 재생 안 될 때 최후 수단) -->
-  <a id="driveLink" href="#" target="_blank" class="drive-link" style="display:none">
-    Drive에서 직접 열기 →
-  </a>
+  <div class="hint" id="hintMsg"></div>
 
 </div>
 
 <script>
+  const GAS_URL = 'https://script.google.com/macros/s/AKfycbxCIUMBHvu0YU77z4ULqrZAez6bue3cWi7Fzyg5slz-FdIY05K1EclHCRDUdcBoxXbPuQ/exec';
+
   const p      = new URLSearchParams(location.search);
   const fileId = p.get('f') || '';
   const name   = decodeURIComponent(p.get('n') || '');
   const cls    = decodeURIComponent(p.get('c') || '');
 
-  const nameEl     = document.getElementById('nameEl');
-  const clsEl      = document.getElementById('clsEl');
-  const player     = document.getElementById('player');
-  const wave       = document.getElementById('wave');
-  const playBtn    = document.getElementById('playBtn');
-  const loadingMsg = document.getElementById('loadingMsg');
-  const hintMsg    = document.getElementById('hintMsg');
-  const driveLink  = document.getElementById('driveLink');
+  const nameEl      = document.getElementById('nameEl');
+  const clsEl       = document.getElementById('clsEl');
+  const player      = document.getElementById('player');
+  const wave        = document.getElementById('wave');
+  const playBtn     = document.getElementById('playBtn');
+  const hintMsg     = document.getElementById('hintMsg');
+  const spinWrap    = document.getElementById('spinWrap');
+  const progressWrap= document.getElementById('progressWrap');
+  const progressBar = document.getElementById('progressBar');
 
   if (!fileId) {
+    spinWrap.style.display = 'none';
     nameEl.textContent = '잘못된 QR코드입니다';
     clsEl.textContent  = '올바른 QR코드를 스캔해 주세요';
   } else {
-    // 이름·학반 즉시 표시
     nameEl.textContent = (name || '학생') + '의 졸업 메시지';
     clsEl.textContent  = cls;
+    loadAudio();
+  }
 
-    // Drive 직접 열기 링크 항상 표시
-    driveLink.href          = 'https://drive.google.com/file/d/' + fileId + '/view';
-    driveLink.style.display = 'inline-block';
+  async function loadAudio() {
+    try {
+      // GAS 프록시를 통해 오디오 로드 (CORS 우회 + 권한 문제 해결)
+      const res  = await fetch(GAS_URL + '?action=audio&id=' + encodeURIComponent(fileId));
+      const data = await res.json();
 
-    // 오디오 직접 로드 — GAS 불필요
-    loadingMsg.style.display = 'block';
-    hintMsg.textContent      = '';
+      if (!data.ok) throw new Error(data.error || '파일 로드 실패');
 
-    player.src = 'https://drive.google.com/uc?id=' + fileId + '&export=download';
-    player.load();
+      // base64 → Blob → ObjectURL
+      const binary = atob(data.b64);
+      const bytes  = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+      const blob   = new Blob([bytes], { type: data.mime });
+      player.src   = URL.createObjectURL(blob);
+      player.load();
+
+    } catch (err) {
+      spinWrap.style.display = 'none';
+      hintMsg.className = 'hint err';
+      hintMsg.innerHTML = '음성을 불러올 수 없습니다.<br>잠시 후 다시 시도해 주세요.';
+    }
   }
 
   // 재생 준비 완료
   player.addEventListener('canplay', () => {
-    loadingMsg.style.display = 'none';
-    playBtn.disabled         = false;
-    hintMsg.textContent      = '버튼을 눌러 음성을 들어보세요';
+    spinWrap.style.display  = 'none';
+    progressWrap.style.display = 'block';
+    playBtn.disabled        = false;
+    hintMsg.className       = 'hint';
+    hintMsg.textContent     = '버튼을 눌러 음성을 들어보세요';
     player.play().catch(() => {});
   }, { once: true });
 
-  // 오류 시 Drive 링크 안내
+  // 재생 진행바 업데이트
+  player.addEventListener('timeupdate', () => {
+    if (!player.duration) return;
+    progressBar.style.width = (player.currentTime / player.duration * 100) + '%';
+  });
+
   player.addEventListener('error', () => {
-    loadingMsg.style.display = 'none';
-    hintMsg.textContent      = '위 버튼이 작동하지 않으면 아래 링크를 이용하세요';
-    playBtn.disabled         = true;
+    spinWrap.style.display = 'none';
+    hintMsg.className = 'hint err';
+    hintMsg.textContent = '음성 재생 중 오류가 발생했습니다.';
+    playBtn.disabled = true;
   });
 
   function togglePlay() {
@@ -129,7 +157,11 @@ body{min-height:100vh;display:flex;flex-direction:column;align-items:center;just
 
   player.addEventListener('play',  () => { wave.className='waveform playing'; playBtn.textContent='■'; });
   player.addEventListener('pause', () => { wave.className='waveform'; playBtn.textContent='▶'; });
-  player.addEventListener('ended', () => { wave.className='waveform'; playBtn.textContent='▶'; });
+  player.addEventListener('ended', () => {
+    wave.className='waveform';
+    playBtn.textContent='▶';
+    progressBar.style.width = '0%';
+  });
 </script>
 </body>
 </html>
