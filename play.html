@@ -89,8 +89,9 @@ body{
   box-shadow:0 1px 6px rgba(154,111,63,.35);
   cursor:pointer;
 }
+/* 현재 시간만 왼쪽 정렬 */
 .seek-time{
-  display:flex;justify-content:space-between;
+  text-align:left;
   font-size:11px;color:var(--muted);
   margin-top:7px;letter-spacing:.3px;
   font-variant-numeric:tabular-nums;
@@ -160,12 +161,11 @@ footer{
     <button class="play-btn" id="playBtn" disabled onclick="togglePlay()">▶</button>
     <audio id="player"></audio>
 
-    <!-- 시크바 -->
+    <!-- 시크바 (전체 시간 제거, 현재 시간만 표시) -->
     <div class="seek-wrap" id="seekWrap">
       <input class="seek-bar" id="seekBar" type="range" min="0" max="100" value="0" step="0.1">
       <div class="seek-time">
         <span id="timeCurrent">0:00</span>
-        <span id="timeDuration">--:--</span>
       </div>
     </div>
 
@@ -194,21 +194,20 @@ footer{
   const name   = decodeURIComponent(p.get('n') || '');
   const cls    = decodeURIComponent(p.get('c') || '');
 
-  const nameEl       = document.getElementById('nameEl');
-  const clsEl        = document.getElementById('clsEl');
-  const player       = document.getElementById('player');
-  const wave         = document.getElementById('wave');
-  const playBtn      = document.getElementById('playBtn');
-  const hintMsg      = document.getElementById('hintMsg');
-  const spinWrap     = document.getElementById('spinWrap');
-  const seekWrap     = document.getElementById('seekWrap');
-  const seekBar      = document.getElementById('seekBar');
-  const timeCurrent  = document.getElementById('timeCurrent');
-  const timeDuration = document.getElementById('timeDuration');
-  const playerWrap   = document.getElementById('playerWrap');
-  const doneWrap     = document.getElementById('doneWrap');
-  const doneTitle    = document.getElementById('doneTitle');
-  const doneMsg      = document.getElementById('doneMsg');
+  const nameEl      = document.getElementById('nameEl');
+  const clsEl       = document.getElementById('clsEl');
+  const player      = document.getElementById('player');
+  const wave        = document.getElementById('wave');
+  const playBtn     = document.getElementById('playBtn');
+  const hintMsg     = document.getElementById('hintMsg');
+  const spinWrap    = document.getElementById('spinWrap');
+  const seekWrap    = document.getElementById('seekWrap');
+  const seekBar     = document.getElementById('seekBar');
+  const timeCurrent = document.getElementById('timeCurrent');
+  const playerWrap  = document.getElementById('playerWrap');
+  const doneWrap    = document.getElementById('doneWrap');
+  const doneTitle   = document.getElementById('doneTitle');
+  const doneMsg     = document.getElementById('doneMsg');
 
   if (!fileId) {
     spinWrap.style.display = 'none';
@@ -237,7 +236,6 @@ footer{
     }
   }
 
-  // 시간 포맷 (초 → m:ss)
   function fmt(sec) {
     if (!sec || isNaN(sec) || !isFinite(sec)) return '0:00';
     const m = Math.floor(sec / 60);
@@ -245,32 +243,21 @@ footer{
     return m + ':' + String(s).padStart(2, '0');
   }
 
-  // 시크바 채운 색상 업데이트
   function updateSeekColor(pct) {
     seekBar.style.background =
       `linear-gradient(to right, var(--gold-light) ${pct}%, var(--border-light) ${pct}%)`;
   }
 
-  // ★ loadedmetadata: duration 확정 시점 → 전체 시간 표시
-  player.addEventListener('loadedmetadata', () => {
-    timeDuration.textContent = fmt(player.duration);
-  });
-
-  // 재생 준비 완료
   player.addEventListener('canplay', () => {
-    spinWrap.style.display  = 'none';
-    seekWrap.style.display  = 'block';
-    playBtn.disabled        = false;
-    hintMsg.textContent     = '버튼을 눌러 음성을 들어보세요';
-    // loadedmetadata가 먼저 왔을 수도 있으니 한 번 더 보정
-    if (player.duration && isFinite(player.duration)) {
-      timeDuration.textContent = fmt(player.duration);
-    }
+    spinWrap.style.display = 'none';
+    seekWrap.style.display = 'block';
+    playBtn.disabled       = false;
+    hintMsg.textContent    = '버튼을 눌러 음성을 들어보세요';
     updateSeekColor(0);
     player.play().catch(() => {});
   }, { once: true });
 
-  // 재생 중 시크바 / 시간 업데이트
+  // 재생 중 시크바 / 현재 시간 업데이트
   player.addEventListener('timeupdate', () => {
     if (!player.duration || !isFinite(player.duration)) return;
     const pct = (player.currentTime / player.duration) * 100;
@@ -303,7 +290,6 @@ footer{
     playBtn.disabled = true;
   });
 
-  // 재생 끝 → 완료 화면
   player.addEventListener('ended', () => {
     wave.className = 'waveform';
     playBtn.textContent = '▶';
