@@ -3,168 +3,354 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Neulstudio</title>
+<title>늘스튜디오 — 졸업 음성 녹음</title>
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;600;700&family=Noto+Sans+KR:wght@300;400;500&display=swap');
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-:root{
-  --gold:#9a6f3f;
-  --gold-light:#c9a96e;
-  --gold-pale:#e8d5b0;
-  --bg:#f5f0e8;
-  --bg-card:#fffdf8;
-  --bg-deep:#ede6d8;
-  --border:#d9c9a8;
-  --border-light:#ede0c4;
-  --text:#2c2318;
-  --text-sub:#6b5740;
-  --muted:#9a8570;
-  --faint:#c8b899;
-  --red:#b05050;
-  --red-bg:#fdf2f2;
-  --red-border:#e8c4c4;
-  --green:#4a8c62;
-  --green-bg:#f2faf5;
-  --green-border:#b8ddc8;
-  --orange:#b07030;
-}
-body{
-  min-height:100vh;
-  display:flex;flex-direction:column;align-items:center;justify-content:center;
-  background:var(--bg);
-  background-image:
-    radial-gradient(ellipse at 20% 20%, rgba(201,169,110,.12) 0%, transparent 60%),
-    radial-gradient(ellipse at 80% 80%, rgba(154,111,63,.08) 0%, transparent 60%);
-  font-family:'Noto Sans KR',sans-serif;
-  color:var(--text);
-  padding:2.5rem 1.5rem;
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&family=Noto+Serif+KR:wght@400;600&display=swap');
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:        #F7F8FA;
+  --card:      #FFFFFF;
+  --primary:   #8A6435;
+  --primary-lt:#B07D4A;
+  --primary-bg:#FBF6EF;
+  --border:    #E5E8EB;
+  --text:      #191919;
+  --sub:       #4E4E4E;
+  --muted:     #8B95A1;
+  --faint:     #C6CAD0;
+  --red:       #D94F4F;
+  --red-bg:    #FFF2F2;
+  --red-border:#FADADA;
+  --green:     #2BA25B;
+  --green-bg:  #F0FAF4;
+  --green-bd:  #B5DFC4;
+  --orange:    #C07030;
+  --input-bg:  #F2F4F6;
+  --shadow:    0 1px 3px rgba(0,0,0,.06), 0 4px 16px rgba(0,0,0,.05);
 }
 
-@keyframes up{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
-@keyframes fadeIn{from{opacity:0}to{opacity:1}}
-@keyframes spin{to{transform:rotate(360deg)}}
-@keyframes wave{0%,100%{height:4px;opacity:.25}50%{height:38px;opacity:1}}
-@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(176,80,80,.2)}50%{box-shadow:0 0 0 12px rgba(176,80,80,0)}}
-@keyframes bloom{0%{transform:scale(.7);opacity:0}60%{transform:scale(1.1)}100%{transform:scale(1);opacity:1}}
-@keyframes urgentPulse{0%,100%{opacity:1}50%{opacity:.5}}
-
-.wrap{width:100%;max-width:390px;animation:up .55s cubic-bezier(.22,1,.36,1) both}
-
-.deco-line{display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:1.5rem}
-.deco-line span{display:block;height:1px;width:48px;background:linear-gradient(to right,transparent,var(--gold-light))}
-.deco-line span:last-child{background:linear-gradient(to left,transparent,var(--gold-light))}
-.deco-line i{font-style:normal;font-size:14px;color:var(--gold-light)}
-
-.school-badge{text-align:center;font-size:11px;letter-spacing:3px;color:var(--muted);margin-bottom:1.25rem;font-weight:300}
-
-.card{
-  background:var(--bg-card);border:1px solid var(--border-light);
-  border-radius:18px;padding:1.5rem;margin-bottom:1rem;
-  box-shadow:0 2px 16px rgba(154,111,63,.06);
+body {
+  min-height: 100vh;
+  background: var(--bg);
+  font-family: 'Noto Sans KR', sans-serif;
+  color: var(--text);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 2.5rem 1.25rem 3rem;
 }
-.lbl{font-size:10px;letter-spacing:2.5px;color:var(--muted);margin-bottom:8px;display:block;font-weight:500}
-input{
-  width:100%;padding:11px 14px;background:var(--bg);
-  border:1px solid var(--border);border-radius:10px;color:var(--text);
-  font-size:15px;font-family:'Noto Sans KR',sans-serif;outline:none;
-  transition:border-color .2s,box-shadow .2s;margin-bottom:1.25rem;
+
+@keyframes up      { from { opacity:0; transform:translateY(18px) } to { opacity:1; transform:none } }
+@keyframes fadeIn  { from { opacity:0 } to { opacity:1 } }
+@keyframes spin    { to   { transform:rotate(360deg) } }
+@keyframes wave    { 0%,100%{ height:3px; opacity:.2 } 50%{ height:34px; opacity:.85 } }
+@keyframes pulse   { 0%,100%{ box-shadow:0 0 0 0 rgba(217,79,79,.25) } 50%{ box-shadow:0 0 0 14px rgba(217,79,79,0) } }
+@keyframes bloom   { 0%{ transform:scale(.75); opacity:0 } 60%{ transform:scale(1.08) } 100%{ transform:scale(1); opacity:1 } }
+@keyframes urgent  { 0%,100%{ opacity:1 } 50%{ opacity:.45 } }
+
+.wrap {
+  width: 100%;
+  max-width: 400px;
+  animation: up .55s cubic-bezier(.22,1,.36,1) both;
 }
-input:focus{border-color:var(--gold-light);box-shadow:0 0 0 3px rgba(201,169,110,.1)}
-input::placeholder{color:var(--faint)}
 
-.class-row{display:flex;align-items:center;gap:8px}
-.grade-badge{
-  padding:11px 14px;background:var(--bg-deep);
-  border:1px solid var(--border);border-radius:10px;
-  font-size:13px;color:var(--text-sub);white-space:nowrap;flex-shrink:0;font-weight:500;
+/* ── 상단 학교 헤더 ── */
+.top-header {
+  margin-bottom: 2rem;
 }
-select{
-  flex:1;padding:11px 10px;background:var(--bg);
-  border:1px solid var(--border);border-radius:10px;color:var(--text);
-  font-size:15px;font-family:'Noto Sans KR',sans-serif;outline:none;
-  transition:border-color .2s,box-shadow .2s;
-  appearance:none;-webkit-appearance:none;text-align:center;cursor:pointer;
+.studio-tag {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--primary);
+  letter-spacing: 2.5px;
+  text-transform: uppercase;
+  margin-bottom: .625rem;
 }
-select:focus{border-color:var(--gold-light);box-shadow:0 0 0 3px rgba(201,169,110,.1)}
-select option{background:var(--bg-card)}
-
-.timer{
-  text-align:center;font-size:40px;font-weight:500;
-  font-variant-numeric:tabular-nums;letter-spacing:3px;
-  transition:color .3s;color:var(--text);
+.school-name {
+  font-size: 26px;          /* ★ 학교 이름 크게 */
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.3;
+  letter-spacing: -.5px;
 }
-.timer.rec{color:var(--red)}
-.timer.warn{color:var(--orange);animation:urgentPulse .8s ease-in-out infinite}
-
-.rec-progress{width:100%;height:4px;background:var(--border-light);border-radius:99px;margin:.75rem 0 .25rem;overflow:hidden}
-.rec-progress-bar{height:100%;width:0%;border-radius:99px;background:linear-gradient(to right,var(--gold-light),var(--gold));transition:width .5s linear,background .5s}
-.rec-progress-bar.warn{background:linear-gradient(to right,#e8a84a,var(--orange))}
-.rec-progress-bar.danger{background:linear-gradient(to right,#e06060,var(--red))}
-
-.time-info{display:flex;justify-content:space-between;align-items:center;font-size:11px;color:var(--muted);margin-bottom:1.5rem;letter-spacing:.5px}
-.time-remaining{font-weight:500;transition:color .3s}
-.time-remaining.warn{color:var(--orange)}
-.time-remaining.danger{color:var(--red)}
-
-.status{text-align:center;font-size:12px;color:var(--muted);min-height:20px;letter-spacing:.3px;margin-bottom:1rem}
-
-.waveform{display:flex;align-items:center;justify-content:center;gap:4px;height:48px;margin-bottom:1.75rem}
-.bar{width:3px;border-radius:99px;background:var(--gold-light);height:4px;opacity:.2;transition:opacity .3s}
-.waveform.recording .bar{animation:wave 1s ease-in-out infinite;opacity:1}
-.waveform.playing   .bar{animation:wave 1.4s ease-in-out infinite;background:var(--green);opacity:1}
-
-.rec-btn{
-  width:70px;height:70px;border-radius:50%;
-  border:1.5px solid var(--border);background:var(--bg-card);
-  cursor:pointer;display:flex;align-items:center;justify-content:center;
-  margin:0 auto 1.75rem;font-size:26px;
-  transition:transform .12s,border-color .2s,box-shadow .2s;
-  box-shadow:0 2px 12px rgba(154,111,63,.1);
+.school-name.placeholder {
+  color: var(--muted);
+  font-size: 18px;
 }
-.rec-btn:hover{border-color:var(--gold-light);transform:scale(1.04);box-shadow:0 4px 20px rgba(154,111,63,.18)}
-.rec-btn:active{transform:scale(.94)}
-.rec-btn.recording{background:var(--red-bg);border-color:var(--red-border);animation:pulse 1.2s ease-in-out infinite}
-
-.btn-row{display:flex;gap:8px;margin-bottom:8px}
-.btn{
-  flex:1;padding:12px 0;border-radius:10px;border:1.5px solid var(--border);
-  font-size:13px;font-family:'Noto Sans KR',sans-serif;cursor:pointer;font-weight:500;
-  transition:background .15s,border-color .15s,transform .1s,box-shadow .15s;
-  background:transparent;color:var(--text-sub);
+.page-desc {
+  font-size: 14px;
+  color: var(--muted);
+  margin-top: .375rem;
+  font-weight: 300;
 }
-.btn:active{transform:scale(.97)}
-.btn:disabled{opacity:.35;cursor:not-allowed;transform:none}
-.btn-listen{color:var(--green);border-color:var(--green-border);background:var(--green-bg)}
-.btn-listen:hover:not(:disabled){background:#e8f5ee;border-color:var(--green)}
-.btn-listen.on{border-color:var(--green);box-shadow:0 0 0 3px rgba(74,140,98,.08)}
-.btn-retry:hover:not(:disabled){background:var(--bg-deep);border-color:var(--faint)}
-.btn-save{background:var(--bg-deep);border-color:var(--gold-light);color:var(--gold)}
-.btn-save:hover:not(:disabled){background:var(--gold-pale);border-color:var(--gold);box-shadow:0 2px 12px rgba(154,111,63,.15)}
 
-.alert{border-radius:10px;padding:.875rem 1.25rem;font-size:12px;line-height:1.9;margin-top:.875rem;display:none;text-align:center}
-.alert.err{background:var(--red-bg);border:1px solid var(--red-border);color:var(--red)}
-.alert.load{background:var(--bg-deep);border:1px solid var(--border);color:var(--muted)}
-.spin{display:inline-block;width:12px;height:12px;border:1.5px solid var(--faint);border-top-color:var(--gold);border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:8px}
+/* ── 카드 ── */
+.card {
+  background: var(--card);
+  border-radius: 16px;
+  padding: 1.5rem;
+  margin-bottom: .75rem;
+  box-shadow: var(--shadow);
+}
+.card-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--sub);
+  margin-bottom: 1rem;
+  letter-spacing: -.1px;
+}
 
-/* ── 녹음 폼 전체 래퍼 ── */
-#formWrap{width:100%}
+/* ── 인풋 ── */
+.field { margin-bottom: .875rem; }
+.field:last-child { margin-bottom: 0; }
+.lbl {
+  display: block;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--muted);
+  margin-bottom: .4rem;
+  letter-spacing: .1px;
+}
+input {
+  width: 100%;
+  padding: 13px 15px;
+  background: var(--input-bg);
+  border: 1.5px solid transparent;
+  border-radius: 10px;
+  color: var(--text);
+  font-size: 15px;
+  font-family: 'Noto Sans KR', sans-serif;
+  font-weight: 400;
+  outline: none;
+  transition: border-color .18s, background .18s;
+}
+input:focus {
+  background: var(--card);
+  border-color: var(--primary-lt);
+}
+input::placeholder { color: var(--faint); }
 
-/* ── 폼 헤더 (완료 시 숨김) ── */
-.form-header{text-align:center;margin-bottom:1.75rem}
-.form-header h1{font-family:'Noto Serif KR',serif;font-size:22px;font-weight:700;color:var(--text)}
+/* ── 셀렉트 행 (학년 뱃지 제거) ── */
+.class-row {
+  display: flex;
+  gap: 8px;
+}
+select {
+  flex: 1;
+  padding: 13px 10px;
+  background: var(--input-bg);
+  border: 1.5px solid transparent;
+  border-radius: 10px;
+  color: var(--text);
+  font-size: 15px;
+  font-family: 'Noto Sans KR', sans-serif;
+  outline: none;
+  transition: border-color .18s, background .18s;
+  appearance: none; -webkit-appearance: none;
+  text-align: center;
+  cursor: pointer;
+}
+select:focus {
+  background: var(--card);
+  border-color: var(--primary-lt);
+}
+select option { background: var(--card); }
+
+/* ── 타이머 ── */
+.timer {
+  text-align: center;
+  font-size: 44px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 2px;
+  color: var(--text);
+  line-height: 1;
+  margin-bottom: .875rem;
+  transition: color .3s;
+}
+.timer.rec  { color: var(--red); }
+.timer.warn { color: var(--orange); animation: urgent .8s ease-in-out infinite; }
+
+/* ── 프로그레스 바 ── */
+.rec-progress {
+  width: 100%;
+  height: 3px;
+  background: var(--border);
+  border-radius: 99px;
+  margin-bottom: .625rem;
+  overflow: hidden;
+}
+.rec-progress-bar {
+  height: 100%;
+  width: 0%;
+  border-radius: 99px;
+  background: var(--primary-lt);
+  transition: width .5s linear, background .4s;
+}
+.rec-progress-bar.warn   { background: var(--orange); }
+.rec-progress-bar.danger { background: var(--red); }
+
+.time-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--muted);
+  margin-bottom: 1.125rem;
+  font-variant-numeric: tabular-nums;
+}
+.time-remaining { font-weight: 500; transition: color .3s; }
+.time-remaining.warn   { color: var(--orange); }
+.time-remaining.danger { color: var(--red); }
+
+/* ── 상태 메시지 ── */
+.status {
+  text-align: center;
+  font-size: 13px;
+  color: var(--muted);
+  min-height: 20px;
+  margin-bottom: 1.25rem;
+  font-weight: 400;
+}
+
+/* ── 파형 ── */
+.waveform {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  height: 44px;
+  margin-bottom: 1.25rem;
+}
+.bar {
+  width: 3px;
+  border-radius: 99px;
+  background: var(--primary-lt);
+  height: 3px;
+  opacity: .2;
+}
+.waveform.recording .bar { animation: wave 1s ease-in-out infinite; opacity: 1; }
+.waveform.playing   .bar { animation: wave 1.4s ease-in-out infinite; background: var(--green); opacity: 1; }
+
+/* ── 녹음 버튼 ── */
+.rec-btn {
+  width: 68px;
+  height: 68px;
+  border-radius: 50%;
+  border: none;
+  background: var(--primary-bg);
+  color: var(--primary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 1.25rem;
+  font-size: 26px;
+  transition: transform .12s, box-shadow .2s, background .2s;
+  box-shadow: 0 2px 10px rgba(138,100,53,.15);
+}
+.rec-btn:hover    { transform: scale(1.05); box-shadow: 0 6px 20px rgba(138,100,53,.22); }
+.rec-btn:active   { transform: scale(.93); }
+.rec-btn.recording {
+  background: var(--red-bg);
+  color: var(--red);
+  animation: pulse 1.3s ease-in-out infinite;
+}
+
+/* ── 액션 버튼들 ── */
+.btn-row { display: flex; gap: 8px; margin-bottom: 8px; }
+.btn {
+  flex: 1;
+  padding: 13px 0;
+  border-radius: 10px;
+  border: none;
+  font-size: 14px;
+  font-family: 'Noto Sans KR', sans-serif;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background .15s, transform .1s, opacity .15s;
+  background: var(--input-bg);
+  color: var(--sub);
+}
+.btn:active   { transform: scale(.97); }
+.btn:disabled { opacity: .35; cursor: not-allowed; transform: none; }
+
+.btn-listen {
+  background: var(--green-bg);
+  color: var(--green);
+}
+.btn-listen:hover:not(:disabled) { background: #E4F5EC; }
+.btn-listen.on { box-shadow: 0 0 0 2px rgba(43,162,91,.2); }
+
+.btn-retry:hover:not(:disabled) { background: #ECEEF1; }
+
+.btn-save {
+  background: var(--primary);
+  color: #fff;
+}
+.btn-save:hover:not(:disabled) { background: var(--primary-lt); }
+
+/* ── 알림 ── */
+.alert {
+  border-radius: 10px;
+  padding: .875rem 1rem;
+  font-size: 13px;
+  line-height: 1.9;
+  margin-top: .75rem;
+  display: none;
+  text-align: center;
+  font-weight: 400;
+}
+.alert.err  { background: var(--red-bg);   border: 1px solid var(--red-border); color: var(--red); }
+.alert.load { background: var(--input-bg); color: var(--muted); }
+.spin {
+  display: inline-block;
+  width: 12px; height: 12px;
+  border: 2px solid var(--faint);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: spin .7s linear infinite;
+  vertical-align: middle;
+  margin-right: 7px;
+}
 
 /* ── 완료 화면 ── */
-.done{display:none;text-align:center;padding:1.5rem 0;animation:fadeIn .6s ease both}
-.done .icon{font-size:58px;margin-bottom:1.25rem;display:block;animation:bloom .6s cubic-bezier(.22,1,.36,1) both}
-.done .title{font-family:'Noto Serif KR',serif;font-size:20px;font-weight:700;color:var(--text);margin-bottom:.6rem}
-.done-divider{width:40px;height:1px;background:var(--faint);margin:1.5rem auto}
-.done .msg{font-size:13px;color:var(--text-sub);line-height:2.2}
+.done {
+  display: none;
+  text-align: center;
+  padding: 2rem 0;
+  animation: fadeIn .6s ease both;
+}
+.done .icon {
+  font-size: 56px;
+  display: block;
+  margin-bottom: 1.25rem;
+  animation: bloom .6s cubic-bezier(.22,1,.36,1) both;
+}
+.done .title {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: .5rem;
+  letter-spacing: -.3px;
+}
+.done .msg {
+  font-size: 14px;
+  color: var(--muted);
+  line-height: 2.1;
+  font-weight: 300;
+}
+.done-divider { width: 32px; height: 1px; background: var(--border); margin: 1.5rem auto; }
 
-footer{
-  text-align:center;font-size:11px;color:var(--faint);
-  letter-spacing:.5px;margin-top:2rem;
-  font-family:'Noto Serif KR',serif;
-  font-style:italic;
+/* ── 푸터 ── */
+footer {
+  margin-top: 2.5rem;
+  text-align: center;
+  font-size: 12px;
+  color: var(--faint);
+  letter-spacing: .3px;
+  font-weight: 300;
 }
 </style>
 </head>
@@ -177,27 +363,35 @@ footer{
     const SCHOOL  = decodeURIComponent(params.get('school') || '');
   </script>
 
-  <div class="deco-line"><span></span><i>✦</i><span></span></div>
-  <div class="school-badge" id="schoolLabel"></div>
+  <!-- ── 상단 학교 헤더 ── -->
+  <div class="top-header">
+    <div class="studio-tag">늘스튜디오</div>
+    <div class="school-name" id="schoolName"></div>
+    <div class="page-desc">졸업 음성 메시지 녹음</div>
+  </div>
 
-  <!-- ══ 녹음 폼 ══ -->
+  <!-- ── 녹음 폼 ── -->
   <div id="formWrap">
-    <div class="form-header">
-      <h1>졸업 음성 메시지 녹음</h1>
+
+    <!-- 학교 미지정 시에만 표시 -->
+    <div class="card" id="schoolCard" style="display:none">
+      <div class="card-title">학교 이름</div>
+      <div class="field" style="margin-bottom:0">
+        <input id="inputSchool" type="text" placeholder="예: ○○초등학교" />
+      </div>
     </div>
 
-    <div id="form">
-      <div class="card" id="schoolCard" style="display:none">
-        <label class="lbl">학교 이름</label>
-        <input id="inputSchool" type="text" placeholder="예: ○○초등학교" style="margin-bottom:0" />
-      </div>
-
-      <div class="card">
+    <!-- 학생 정보 -->
+    <div class="card">
+      <div class="card-title">학생 정보</div>
+      <div class="field">
         <label class="lbl">이름</label>
         <input id="inputName" type="text" placeholder="예: 홍길동" />
-        <label class="lbl">학반 및 번호</label>
+      </div>
+      <div class="field" style="margin-bottom:0">
+        <label class="lbl">반 · 번호</label>
+        <!-- ★ 학년 뱃지 삭제 — 반과 번호 셀렉트만 -->
         <div class="class-row">
-          <span class="grade-badge">6학년</span>
           <select id="selectBan">
             <option value="">반 ▾</option>
             <option>1</option><option>2</option><option>3</option><option>4</option><option>5</option>
@@ -216,79 +410,83 @@ footer{
           </select>
         </div>
       </div>
+    </div>
 
-      <div class="card">
-        <div class="timer" id="timer">00:00</div>
-        <div class="rec-progress"><div class="rec-progress-bar" id="recBar"></div></div>
-        <div class="time-info">
-          <span id="elapsedLbl">0초</span>
-          <span class="time-remaining" id="remainLbl">40초 남음</span>
-        </div>
-        <div class="status" id="status">버튼을 눌러 녹음을 시작하세요</div>
-
-        <button class="rec-btn" id="recBtn" onclick="toggleRecord()">⏺</button>
-
-        <div class="waveform" id="wave">
-          <div class="bar" style="animation-delay:.00s"></div>
-          <div class="bar" style="animation-delay:.07s"></div>
-          <div class="bar" style="animation-delay:.14s"></div>
-          <div class="bar" style="animation-delay:.21s"></div>
-          <div class="bar" style="animation-delay:.28s"></div>
-          <div class="bar" style="animation-delay:.35s"></div>
-          <div class="bar" style="animation-delay:.42s"></div>
-          <div class="bar" style="animation-delay:.49s"></div>
-          <div class="bar" style="animation-delay:.42s"></div>
-          <div class="bar" style="animation-delay:.35s"></div>
-          <div class="bar" style="animation-delay:.28s"></div>
-          <div class="bar" style="animation-delay:.21s"></div>
-          <div class="bar" style="animation-delay:.14s"></div>
-          <div class="bar" style="animation-delay:.07s"></div>
-          <div class="bar" style="animation-delay:.00s"></div>
-        </div>
-
-        <audio id="preview"
-          onplay="$('wave').className='waveform playing';$('listenBtn').textContent='정지 ■';$('listenBtn').classList.add('on')"
-          onpause="$('wave').className='waveform';$('listenBtn').textContent='다시 듣기 ▶';$('listenBtn').classList.remove('on')"
-          onended="$('wave').className='waveform';$('listenBtn').textContent='다시 듣기 ▶';$('listenBtn').classList.remove('on')">
-        </audio>
-
-        <div class="btn-row">
-          <button class="btn btn-listen" id="listenBtn" disabled onclick="toggleListen()">다시 듣기 ▶</button>
-        </div>
-        <div class="btn-row">
-          <button class="btn btn-retry" id="retryBtn" disabled onclick="retry()">다시 녹음</button>
-          <button class="btn btn-save"  id="saveBtn"  disabled onclick="save()">저장하기 →</button>
-        </div>
-
-        <div class="alert err"  id="alertErr"></div>
-        <div class="alert load" id="alertLoad"><span class="spin"></span>저장 중입니다…</div>
+    <!-- 녹음 -->
+    <div class="card">
+      <div class="timer" id="timer">00:00</div>
+      <div class="rec-progress"><div class="rec-progress-bar" id="recBar"></div></div>
+      <div class="time-row">
+        <span id="elapsedLbl">0초</span>
+        <span class="time-remaining" id="remainLbl">40초 남음</span>
       </div>
+
+      <div class="status" id="status">버튼을 눌러 녹음을 시작하세요</div>
+
+      <button class="rec-btn" id="recBtn" onclick="toggleRecord()">⏺</button>
+
+      <div class="waveform" id="wave">
+        <div class="bar" style="animation-delay:.00s"></div>
+        <div class="bar" style="animation-delay:.07s"></div>
+        <div class="bar" style="animation-delay:.14s"></div>
+        <div class="bar" style="animation-delay:.21s"></div>
+        <div class="bar" style="animation-delay:.28s"></div>
+        <div class="bar" style="animation-delay:.35s"></div>
+        <div class="bar" style="animation-delay:.42s"></div>
+        <div class="bar" style="animation-delay:.49s"></div>
+        <div class="bar" style="animation-delay:.42s"></div>
+        <div class="bar" style="animation-delay:.35s"></div>
+        <div class="bar" style="animation-delay:.28s"></div>
+        <div class="bar" style="animation-delay:.21s"></div>
+        <div class="bar" style="animation-delay:.14s"></div>
+        <div class="bar" style="animation-delay:.07s"></div>
+        <div class="bar" style="animation-delay:.00s"></div>
+      </div>
+
+      <audio id="preview"
+        onplay="$('wave').className='waveform playing';$('listenBtn').textContent='정지 ■';$('listenBtn').classList.add('on')"
+        onpause="$('wave').className='waveform';$('listenBtn').textContent='다시 듣기 ▶';$('listenBtn').classList.remove('on')"
+        onended="$('wave').className='waveform';$('listenBtn').textContent='다시 듣기 ▶';$('listenBtn').classList.remove('on')">
+      </audio>
+
+      <div class="btn-row">
+        <button class="btn btn-listen" id="listenBtn" disabled onclick="toggleListen()">다시 듣기 ▶</button>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-retry" id="retryBtn" disabled onclick="retry()">다시 녹음</button>
+        <button class="btn btn-save"  id="saveBtn"  disabled onclick="save()">저장하기 →</button>
+      </div>
+
+      <div class="alert err"  id="alertErr"></div>
+      <div class="alert load" id="alertLoad"><span class="spin"></span>저장 중입니다…</div>
     </div>
   </div>
 
-  <!-- ══ 완료 화면 (폼과 완전히 분리) ══ -->
+  <!-- ── 완료 화면 ── -->
   <div class="done" id="done">
     <span class="icon">🎉</span>
     <div class="title" id="doneTitle"></div>
     <div class="done-divider"></div>
     <div class="msg">
-      졸업을 축하해요.<br>
+      졸업을 진심으로 축하해요.<br>
       졸업앨범 QR코드를 스캔하면<br>
-      이 목소리를 들을 수 있답니다 🎓
+      이 목소리를 다시 들을 수 있어요 🎓
     </div>
   </div>
 
-  <footer>소중한 순간은 늘 여기에 - 늘스튜디오</footer>
+  <footer>소중한 순간은 늘 여기에 · 늘스튜디오</footer>
 </div>
 
 <script>
-  const schoolLabel = document.getElementById('schoolLabel');
-  const schoolCard  = document.getElementById('schoolCard');
+  const schoolNameEl = document.getElementById('schoolName');
+  const schoolCard   = document.getElementById('schoolCard');
+
   if (SCHOOL) {
-    schoolLabel.textContent = SCHOOL;
+    schoolNameEl.textContent = SCHOOL;
   } else {
+    schoolNameEl.textContent = '졸업앨범 녹음';
+    schoolNameEl.classList.add('placeholder');
     schoolCard.style.display = 'block';
-    schoolLabel.textContent  = '졸업앨범 음성 녹음';
   }
 
   let recorder = null, chunks = [], isRec = false;
@@ -338,7 +536,7 @@ footer{
     const ban = $('selectBan').value;
     const num = $('selectNum').value;
     if (!ban || !num) return '';
-    return '6학년 ' + ban + '반 ' + num + '번';
+    return ban + '반 ' + num + '번';   // ★ 학년 제거
   }
 
   async function toggleRecord() {
@@ -439,7 +637,6 @@ footer{
       const data = await res.json();
       $('alertLoad').style.display = 'none';
       if (data.success) {
-        // 폼 전체 숨기고 완료 화면만 표시
         $('formWrap').style.display = 'none';
         $('doneTitle').textContent  = name + '님의 목소리가 저장됐어요!';
         $('done').style.display     = 'block';
