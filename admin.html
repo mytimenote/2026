@@ -176,10 +176,8 @@ footer { margin-top:3rem; text-align:center; font-size:12px; color:var(--faint);
       </div>
       <div class="action-bar">
         <button class="btn btn-primary" id="dlBtn" onclick="downloadZip()">ZIP 다운로드</button>
-        <button class="btn btn-ghost"   id="shortBtn" onclick="shortenAllUrls()">🔗 URL 단축 (QR 단순화)</button>
         <button class="btn btn-ghost"   onclick="loadStudents()">새로고침</button>
       </div>
-      <div class="alert" id="shortAlert" style="display:none;background:#EBF3FE;border:1px solid #5B9DF8;color:#1a5fb4;border-radius:10px;padding:.75rem 1rem;font-size:13px;margin-bottom:.5rem;"></div>
       <div class="qr-grid" id="qrGrid"></div>
     </div>
   </div>
@@ -250,7 +248,6 @@ footer { margin-top:3rem; text-align:center; font-size:12px; color:var(--faint);
 
 <script>
   let students = [];
-  let shortUrls = {}; // 단축 URL 캐시: index → shortUrl
 
   const DEFAULT_GAS   = 'https://script.google.com/macros/s/AKfycbxCIUMBHvu0YU77z4ULqrZAez6bue3cWi7Fzyg5slz-FdIY05K1EclHCRDUdcBoxXbPuQ/exec';
   const DEFAULT_PAGES = 'https://mytimenote.github.io/2026';
@@ -314,9 +311,6 @@ footer { margin-top:3rem; text-align:center; font-size:12px; color:var(--faint);
       const res=await fetch(getGasUrl()+'?action=list&school='+encodeURIComponent(school));
       const data=await res.json();
       students=data.students||[];
-      shortUrls = {}; // 학교 변경 시 단축 URL 초기화
-      document.getElementById('shortAlert').style.display='none';
-      document.getElementById('shortBtn').textContent='🔗 URL 단축 (QR 단순화)';
       document.getElementById('loadingRow').style.display='none';
       document.getElementById('resultSection').style.display='block';
       document.getElementById('statCount').textContent=students.length;
@@ -328,26 +322,21 @@ footer { margin-top:3rem; text-align:center; font-size:12px; color:var(--faint);
     }
   }
 
-  function getQrUrl(index) {
-    return shortUrls[index] || makeUrl(students[index]);
-  }
-
   function renderGrid(){
     const grid=document.getElementById('qrGrid');
     if(!students.length){ grid.innerHTML='<div class="empty">녹음된 학생이 없습니다</div>'; return; }
     grid.innerHTML=students.map((s,i)=>{
-      const url=getQrUrl(i), rawUrl=makeUrl(s), valid=isValidUrl(rawUrl);
-      const isShort = !!shortUrls[i];
+      const url=makeUrl(s), valid=isValidUrl(url);
       return `<div class="qr-card">
         <div class="qr-box" id="qr-box-${i}"></div>
         <div class="qr-name">${s.name}</div>
         <div class="qr-cls">${s.className}</div>
-        <div class="qr-url ${valid?'valid':'error'}">${isShort ? '🔗 ' + url : (valid ? rawUrl : '⚠️ URL 오류 — 설정 탭 확인')}</div>
+        <div class="qr-url ${valid?'valid':'error'}">${valid?url:'⚠️ URL 오류 — 설정 탭 확인'}</div>
       </div>`;
     }).join('');
     students.forEach((s,i)=>{
-      const url=getQrUrl(i);
-      if(!isValidUrl(makeUrl(s)))return;
+      const url=makeUrl(s);
+      if(!isValidUrl(url))return;
       new QRCode(document.getElementById('qr-box-'+i),{text:url,width:110,height:110,colorDark:'#191919',colorLight:'#ffffff',correctLevel:QRCode.CorrectLevel.L});
     });
   }
@@ -366,7 +355,7 @@ footer { margin-top:3rem; text-align:center; font-size:12px; color:var(--faint);
       canvas.toBlob(blob=>{zip.file(school+'_'+s.name+'_'+s.className+'.png',blob);resolve()},'image/png');
     })));
     const csvRows=[['학교','이름','학반','QR URL']];
-    students.forEach((s,i)=>csvRows.push([school,s.name,s.className,getQrUrl(i)]));
+    students.forEach(s=>csvRows.push([school,s.name,s.className,makeUrl(s)]));
     zip.file('학생목록.csv','\uFEFF'+csvRows.map(r=>r.join(',')).join('\n'));
     saveAs(await zip.generateAsync({type:'blob'}),school+'_QR코드.zip');
     btn.disabled=false; btn.textContent='ZIP 다운로드';
@@ -411,49 +400,15 @@ footer { margin-top:3rem; text-align:center; font-size:12px; color:var(--faint);
   async function deletePassword(school){
     if(!confirm(school+' 비밀번호를 삭제할까요?')) return;
     try{
-      await fetch(getGasUrl(),{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action:'setPassword',school,password:''}),redirect:'follow'});
-      loadPasswords();
-    }catch{ alert('삭제 실패'); }
-  }
-
-  // ── URL 단축 (QR 단순화) ──
-  async function shortenAllUrls() {
-    const btn = document.getElementById('shortBtn');
-    const alertEl = document.getElementById('shortAlert');
-    btn.disabled = true;
-    shortUrls = {};
-    let done = 0, failed = 0;
-    const total = students.filter(s => isValidUrl(makeUrl(s))).length;
-    alertEl.style.display = 'block';
-    alertEl.textContent = `URL 단축 중… 0 / ${total}`;
-
-    for (let i = 0; i < students.length; i++) {
-      const url = makeUrl(students[i]);
-      if (!isValidUrl(url)) continue;
-      try {
-        const res = await fetch(
-          `https://is.gd/create.php?format=simple&url=${encodeURIComponent(url)}`
-        );
-        if (res.ok) {
-          const short = (await res.text()).trim();
-          if (short.startsWith('https://is.gd/') || short.startsWith('https://v.gd/')) {
-            shortUrls[i] = short;
-            done++;
-          } else { failed++; }
-        } else { failed++; }
-      } catch { failed++; }
-      alertEl.textContent = `URL 단축 중… ${done + failed} / ${total}`;
-      await new Promise(r => setTimeout(r, 300)); // API 요청 간격
-    }
-
-    renderGrid();
-    btn.disabled = false;
-    btn.textContent = '🔗 URL 재단축';
-    if (failed === 0) {
-      alertEl.textContent = `✅ ${done}개 URL 단축 완료 — QR이 훨씬 단순해졌습니다!`;
-    } else {
-      alertEl.textContent = `✅ ${done}개 단축 완료 / ⚠️ ${failed}개 실패 (API 제한일 수 있음)`;
-    }
+      const res  = await fetch(getGasUrl(),{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action:'deletePassword',school}),redirect:'follow'});
+      const data = await res.json();
+      if(data.success){
+        showMsg('pwOk','✓ 삭제됐습니다.');
+        loadPasswords();
+      } else {
+        alert('삭제 실패: ' + (data.error || '알 수 없는 오류'));
+      }
+    }catch(e){ alert('삭제 중 오류가 발생했습니다.'); }
   }
 
   function showMsg(id,msg){ const el=document.getElementById(id); el.textContent=msg; el.style.display='block'; }
