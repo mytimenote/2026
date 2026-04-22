@@ -9,147 +9,98 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&display=swap');
-
-*, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
-
-:root {
-  --bg:       #F7F8FA;
-  --card:     #FFFFFF;
-  --primary:  #3182F6;
-  --pri-lt:   #5B9DF8;
-  --pri-bg:   #EBF3FE;
-  --border:   #E5E8EB;
-  --text:     #191919;
-  --sub:      #4E4E4E;
-  --muted:    #8B95A1;
-  --faint:    #C6CAD0;
-  --input-bg: #F2F4F6;
-  --red:      #F04452;
-  --red-bg:   #FFF2F3;
-  --red-bd:   #FDDDDD;
-  --green:    #2BA25B;
-  --green-bg: #F0FAF4;
-  --green-bd: #B5DFC4;
-  --shadow:   0 1px 3px rgba(0,0,0,.06), 0 4px 16px rgba(0,0,0,.05);
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#F7F8FA; --card:#FFFFFF; --primary:#3182F6; --pri-lt:#5B9DF8; --pri-bg:#EBF3FE;
+  --border:#E5E8EB; --text:#191919; --sub:#4E4E4E; --muted:#8B95A1; --faint:#C6CAD0;
+  --input-bg:#F2F4F6; --red:#F04452; --red-bg:#FFF2F3; --red-bd:#FDDDDD;
+  --green:#2BA25B; --green-bg:#F0FAF4; --green-bd:#B5DFC4;
+  --shadow:0 1px 3px rgba(0,0,0,.06),0 4px 16px rgba(0,0,0,.05);
 }
-
-body { min-height:100vh; background:var(--bg); font-family:'Noto Sans KR',sans-serif; color:var(--text); padding:2.5rem 1.25rem 4rem; }
-
-@keyframes up     { from{opacity:0;transform:translateY(14px)} to{opacity:1;transform:none} }
-@keyframes fadeIn { from{opacity:0} to{opacity:1} }
-@keyframes spin   { to{transform:rotate(360deg)} }
-
-.page { max-width:900px; margin:0 auto; animation:up .5s cubic-bezier(.22,1,.36,1) both; }
-
-.top-header { margin-bottom:2rem; }
-.studio-tag { font-size:11px; font-weight:600; color:var(--primary); letter-spacing:2.5px; text-transform:uppercase; margin-bottom:.5rem; }
-.page-title { font-size:26px; font-weight:700; color:var(--text); letter-spacing:-.5px; margin-bottom:.25rem; }
-.page-desc  { font-size:14px; color:var(--muted); font-weight:300; }
+body{min-height:100vh;background:var(--bg);font-family:'Noto Sans KR',sans-serif;color:var(--text);padding:2.5rem 1.25rem 4rem}
+@keyframes up    {from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes spin  {to{transform:rotate(360deg)}}
+.page{max-width:900px;margin:0 auto;animation:up .5s cubic-bezier(.22,1,.36,1) both}
+.top-header{margin-bottom:2rem}
+.studio-tag{font-size:11px;font-weight:600;color:var(--primary);letter-spacing:2.5px;text-transform:uppercase;margin-bottom:.5rem}
+.page-title{font-size:26px;font-weight:700;color:var(--text);letter-spacing:-.5px;margin-bottom:.25rem}
+.page-desc{font-size:14px;color:var(--muted);font-weight:300}
 
 /* 탭 */
-.tabs { display:flex; gap:4px; margin-bottom:1.5rem; background:var(--input-bg); border-radius:12px; padding:4px; }
-.tab {
-  flex:1; padding:10px; border-radius:9px; border:none;
-  font-size:13px; font-family:'Noto Sans KR',sans-serif; font-weight:500;
-  cursor:pointer; color:var(--muted); background:transparent;
-  transition:background .15s, color .15s;
-}
-.tab.active { background:var(--card); color:var(--text); box-shadow:0 1px 4px rgba(0,0,0,.08); }
+.tabs{display:flex;gap:4px;margin-bottom:1.5rem;background:var(--input-bg);border-radius:12px;padding:4px}
+.tab{flex:1;padding:10px;border-radius:9px;border:none;font-size:13px;font-family:'Noto Sans KR',sans-serif;font-weight:500;cursor:pointer;color:var(--muted);background:transparent;transition:background .15s,color .15s}
+.tab.active{background:var(--card);color:var(--text);box-shadow:0 1px 4px rgba(0,0,0,.08)}
+.tab-content{display:none}
+.tab-content.active{display:block;animation:fadeIn .3s ease both}
 
-.tab-content { display:none; }
-.tab-content.active { display:block; animation:fadeIn .3s ease both; }
-
-.card { background:var(--card); border-radius:16px; padding:1.5rem; margin-bottom:.75rem; box-shadow:var(--shadow); }
-.card-title { font-size:13px; font-weight:600; color:var(--sub); margin-bottom:1.125rem; }
-
-.field { margin-bottom:.875rem; }
-.field:last-of-type { margin-bottom:0; }
-.lbl { display:block; font-size:12px; font-weight:500; color:var(--muted); margin-bottom:.4rem; }
-input, select {
-  width:100%; padding:12px 14px;
-  background:var(--input-bg); border:1.5px solid transparent;
-  border-radius:10px; color:var(--text);
-  font-size:14px; font-family:'Noto Sans KR',sans-serif;
-  outline:none; transition:border-color .18s, background .18s;
-}
-input:focus, select:focus { background:var(--card); border-color:var(--pri-lt); }
-input::placeholder { color:var(--faint); }
-select { cursor:pointer; appearance:none; -webkit-appearance:none; }
-select option { background:var(--card); }
-
-.btn-row { display:flex; gap:8px; flex-wrap:wrap; margin-top:1rem; }
-.btn { padding:11px 20px; border-radius:10px; border:none; font-size:13px; font-family:'Noto Sans KR',sans-serif; font-weight:500; cursor:pointer; white-space:nowrap; transition:background .15s, transform .1s; }
-.btn:active   { transform:scale(.97); }
-.btn:disabled { opacity:.4; cursor:not-allowed; transform:none; }
-.btn-primary { background:var(--primary); color:#fff; }
-.btn-primary:hover:not(:disabled) { background:var(--pri-lt); }
-.btn-ghost   { background:var(--input-bg); color:var(--sub); }
-.btn-ghost:hover:not(:disabled)   { background:#E9EAEC; }
-.btn-danger  { background:var(--red-bg); color:var(--red); }
-.btn-danger:hover:not(:disabled)  { background:#FFE5E7; }
-
-.alert { border-radius:10px; padding:.75rem 1rem; font-size:13px; line-height:1.9; margin-top:.75rem; display:none; }
-.alert.err  { background:var(--red-bg);   border:1px solid var(--red-bd);  color:var(--red); }
-.alert.ok   { background:var(--green-bg); border:1px solid var(--green-bd);color:var(--green); }
+.card{background:var(--card);border-radius:16px;padding:1.5rem;margin-bottom:.75rem;box-shadow:var(--shadow)}
+.card-title{font-size:13px;font-weight:600;color:var(--sub);margin-bottom:1.125rem}
+.field{margin-bottom:.875rem}
+.field:last-of-type{margin-bottom:0}
+.lbl{display:block;font-size:12px;font-weight:500;color:var(--muted);margin-bottom:.4rem}
+input,select{width:100%;padding:12px 14px;background:var(--input-bg);border:1.5px solid transparent;border-radius:10px;color:var(--text);font-size:14px;font-family:'Noto Sans KR',sans-serif;outline:none;transition:border-color .18s,background .18s}
+input:focus,select:focus{background:var(--card);border-color:var(--pri-lt)}
+input::placeholder{color:var(--faint)}
+select{cursor:pointer;appearance:none;-webkit-appearance:none}
+select option{background:var(--card)}
+.btn-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:1rem}
+.btn{padding:11px 20px;border-radius:10px;border:none;font-size:13px;font-family:'Noto Sans KR',sans-serif;font-weight:500;cursor:pointer;white-space:nowrap;transition:background .15s,transform .1s}
+.btn:active{transform:scale(.97)}
+.btn:disabled{opacity:.4;cursor:not-allowed;transform:none}
+.btn-primary{background:var(--primary);color:#fff}
+.btn-primary:hover:not(:disabled){background:var(--pri-lt)}
+.btn-ghost{background:var(--input-bg);color:var(--sub)}
+.btn-ghost:hover:not(:disabled){background:#E9EAEC}
+.alert{border-radius:10px;padding:.75rem 1rem;font-size:13px;line-height:1.9;margin-top:.75rem;display:none}
+.alert.err{background:var(--red-bg);border:1px solid var(--red-bd);color:var(--red)}
+.alert.ok {background:var(--green-bg);border:1px solid var(--green-bd);color:var(--green)}
 
 /* 비밀번호 목록 */
-.pw-list { display:flex; flex-direction:column; gap:8px; margin-top:1rem; }
-.pw-row {
-  display:flex; align-items:center; gap:10px;
-  background:var(--bg); border-radius:10px; padding:.75rem 1rem;
-}
-.pw-school { flex:1; font-size:14px; font-weight:600; color:var(--text); }
-.pw-value  { font-size:13px; color:var(--muted); font-family:monospace; letter-spacing:1px; }
-.pw-del    { flex-shrink:0; padding:6px 12px; border-radius:8px; border:none; background:var(--red-bg); color:var(--red); font-size:12px; font-family:'Noto Sans KR',sans-serif; cursor:pointer; }
-.pw-del:hover { background:#FFE5E7; }
-.pw-empty  { text-align:center; padding:2rem; color:var(--muted); font-size:14px; }
+.pw-list{display:flex;flex-direction:column;gap:8px;margin-top:1rem}
+.pw-row{display:flex;align-items:center;gap:10px;background:var(--bg);border-radius:10px;padding:.75rem 1rem}
+.pw-school{flex:1;font-size:14px;font-weight:600;color:var(--text)}
+.pw-value{font-size:13px;color:var(--muted);font-family:monospace;letter-spacing:1px}
+.pw-del{flex-shrink:0;padding:7px 14px;border-radius:8px;border:none;background:var(--red-bg);color:var(--red);font-size:12px;font-family:'Noto Sans KR',sans-serif;font-weight:500;cursor:pointer;transition:background .15s}
+.pw-del:hover{background:#FFE5E7}
+.pw-del:disabled{opacity:.5;cursor:not-allowed}
+.pw-empty{text-align:center;padding:2rem;color:var(--muted);font-size:14px}
 
-/* 통계 */
-.stats { display:flex; gap:.75rem; margin-bottom:1rem; flex-wrap:wrap; }
-.stat  { background:var(--card); border-radius:14px; padding:1rem 1.25rem; box-shadow:var(--shadow); min-width:130px; }
-.stat-val { font-size:26px; font-weight:700; color:var(--text); margin-bottom:2px; letter-spacing:-.5px; }
-.stat-val.blue { color:var(--primary); }
-.stat-lbl { font-size:11px; color:var(--muted); }
-
-.action-bar { display:flex; gap:8px; margin-bottom:1.25rem; flex-wrap:wrap; }
-
-/* QR 그리드 */
-.qr-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:10px; }
-.qr-card { background:var(--card); border-radius:12px; padding:.875rem .75rem; text-align:center; box-shadow:var(--shadow); transition:transform .15s,box-shadow .15s; }
-.qr-card:hover { transform:translateY(-2px); box-shadow:0 4px 20px rgba(0,0,0,.09); }
-.qr-box { background:#fff; border-radius:6px; padding:5px; display:inline-flex; align-items:center; justify-content:center; margin-bottom:.625rem; border:1px solid var(--border); }
-.qr-box img, .qr-box canvas { width:110px !important; height:110px !important; display:block; }
-.qr-name { font-size:13px; font-weight:600; color:var(--text); margin-bottom:2px; }
-.qr-cls  { font-size:11px; color:var(--muted); margin-bottom:.5rem; }
-.qr-url  { font-size:9px; color:var(--faint); word-break:break-all; line-height:1.5; text-align:left; background:var(--bg); border-radius:6px; padding:4px 6px; }
-.qr-url.valid { color:var(--green); }
-.qr-url.error { color:var(--red); font-weight:600; }
-
-.empty { grid-column:1/-1; text-align:center; padding:3rem; color:var(--muted); font-size:14px; }
-
-.loading-row { display:none; align-items:center; gap:8px; font-size:13px; color:var(--muted); margin-top:.75rem; }
-.spinner { display:inline-block; width:14px; height:14px; border:2px solid var(--faint); border-top-color:var(--primary); border-radius:50%; animation:spin .7s linear infinite; }
-
-footer { margin-top:3rem; text-align:center; font-size:12px; color:var(--faint); letter-spacing:.3px; font-weight:300; }
+/* 통계 / QR */
+.stats{display:flex;gap:.75rem;margin-bottom:1rem;flex-wrap:wrap}
+.stat{background:var(--card);border-radius:14px;padding:1rem 1.25rem;box-shadow:var(--shadow);min-width:130px}
+.stat-val{font-size:26px;font-weight:700;color:var(--text);margin-bottom:2px;letter-spacing:-.5px}
+.stat-val.blue{color:var(--primary)}
+.stat-lbl{font-size:11px;color:var(--muted)}
+.action-bar{display:flex;gap:8px;margin-bottom:1.25rem;flex-wrap:wrap}
+.qr-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.qr-card{background:var(--card);border-radius:12px;padding:1rem .875rem;text-align:center;box-shadow:var(--shadow);transition:transform .15s,box-shadow .15s}
+.qr-card:hover{transform:translateY(-2px);box-shadow:0 4px 20px rgba(0,0,0,.09)}
+.qr-box{background:#fff;border-radius:6px;padding:5px;display:inline-flex;align-items:center;justify-content:center;margin-bottom:.625rem;border:1px solid var(--border)}
+.qr-box img,.qr-box canvas{width:128px!important;height:128px!important;display:block}
+.qr-name{font-size:13px;font-weight:600;color:var(--text);margin-bottom:2px}
+.qr-cls{font-size:11px;color:var(--muted)}
+.empty{grid-column:1/-1;text-align:center;padding:3rem;color:var(--muted);font-size:14px}
+.loading-row{display:none;align-items:center;gap:8px;font-size:13px;color:var(--muted);margin-top:.75rem}
+.spinner{display:inline-block;width:14px;height:14px;border:2px solid var(--faint);border-top-color:var(--primary);border-radius:50%;animation:spin .7s linear infinite}
+footer{margin-top:3rem;text-align:center;font-size:12px;color:var(--faint);letter-spacing:.3px;font-weight:300}
 </style>
 </head>
 <body>
 <div class="page">
-
   <div class="top-header">
     <div class="studio-tag">늘스튜디오</div>
     <div class="page-title">관리자</div>
     <div class="page-desc">QR 생성 · 비밀번호 관리</div>
   </div>
 
-  <!-- 탭 -->
   <div class="tabs">
     <button class="tab active" onclick="switchTab('qr')">📋 QR 생성</button>
     <button class="tab"        onclick="switchTab('pw')">🔒 비밀번호 관리</button>
     <button class="tab"        onclick="switchTab('settings')">⚙️ 설정</button>
   </div>
 
-  <!-- ── QR 탭 ── -->
+  <!-- QR 탭 -->
   <div class="tab-content active" id="tab-qr">
     <div class="card">
       <div class="card-title">학교 선택</div>
@@ -162,17 +113,10 @@ footer { margin-top:3rem; text-align:center; font-size:12px; color:var(--faint);
         <span class="spinner"></span> 불러오는 중…
       </div>
     </div>
-
-    <div id="resultSection" style="display:none; animation:fadeIn .4s ease both">
+    <div id="resultSection" style="display:none;animation:fadeIn .4s ease both">
       <div class="stats">
-        <div class="stat">
-          <div class="stat-val blue" id="statCount">0</div>
-          <div class="stat-lbl">녹음 완료</div>
-        </div>
-        <div class="stat">
-          <div class="stat-val" id="statSchool" style="font-size:16px;padding-top:6px">—</div>
-          <div class="stat-lbl">선택된 학교</div>
-        </div>
+        <div class="stat"><div class="stat-val blue" id="statCount">0</div><div class="stat-lbl">녹음 완료</div></div>
+        <div class="stat"><div class="stat-val" id="statSchool" style="font-size:16px;padding-top:6px">—</div><div class="stat-lbl">선택된 학교</div></div>
       </div>
       <div class="action-bar">
         <button class="btn btn-primary" id="dlBtn" onclick="downloadZip()">ZIP 다운로드</button>
@@ -182,7 +126,7 @@ footer { margin-top:3rem; text-align:center; font-size:12px; color:var(--faint);
     </div>
   </div>
 
-  <!-- ── 비밀번호 탭 ── -->
+  <!-- 비밀번호 탭 -->
   <div class="tab-content" id="tab-pw">
     <div class="card">
       <div class="card-title">학교별 비밀번호 설정</div>
@@ -200,29 +144,26 @@ footer { margin-top:3rem; text-align:center; font-size:12px; color:var(--faint);
       <div class="alert err" id="pwErr"></div>
       <div class="alert ok"  id="pwOk"></div>
     </div>
-
     <div class="card">
       <div class="card-title">설정된 비밀번호 목록</div>
-      <div class="pw-list" id="pwList">
-        <div class="pw-empty">불러오는 중…</div>
-      </div>
+      <div class="pw-list" id="pwList"><div class="pw-empty">불러오는 중…</div></div>
       <div class="btn-row" style="margin-top:1rem">
         <button class="btn btn-ghost" onclick="loadPasswords()">새로고침</button>
       </div>
+      <div class="alert err" id="pwDelErr" style="margin-top:.75rem"></div>
+      <div class="alert ok"  id="pwDelOk"  style="margin-top:.75rem"></div>
     </div>
-
     <div class="card" style="background:var(--pri-bg);border:1.5px solid rgba(49,130,246,.2)">
-      <div class="card-title" style="color:var(--primary)">💡 비밀번호 운영 방법</div>
+      <div class="card-title" style="color:var(--primary)">💡 운영 방법</div>
       <p style="font-size:13px;color:var(--sub);line-height:2">
         선생님이 반 전체에 비밀번호 하나를 알려주세요.<br>
         학생들은 비밀번호 입력 후 녹음 화면으로 진입해요.<br>
-        같은 이름+반+번호로는 <strong>1회만 제출</strong>할 수 있어요.<br>
-        학기마다 비밀번호를 변경하면 보안이 유지돼요.
+        같은 이름+반+번호로는 <strong>1회만 제출</strong>할 수 있어요.
       </p>
     </div>
   </div>
 
-  <!-- ── 설정 탭 ── -->
+  <!-- 설정 탭 -->
   <div class="tab-content" id="tab-settings">
     <div class="card">
       <div class="card-title">연결 설정</div>
@@ -259,9 +200,9 @@ footer { margin-top:3rem; text-align:center; font-size:12px; color:var(--faint);
     loadPasswords();
   };
 
-  // ── 탭 전환 ──
   function switchTab(name) {
-    document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active', ['qr','pw','settings'][i]===name));
+    document.querySelectorAll('.tab').forEach((t,i) =>
+      t.classList.toggle('active', ['qr','pw','settings'][i] === name));
     document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
     document.getElementById('tab-'+name).classList.add('active');
   }
@@ -275,143 +216,153 @@ footer { margin-top:3rem; text-align:center; font-size:12px; color:var(--faint);
 
   function getGasUrl()   { return document.getElementById('gasUrl').value.trim(); }
   function getPagesUrl() { return document.getElementById('pagesUrl').value.trim().replace(/\/$/,''); }
+  function makeUrl(s)    { return getPagesUrl() + '/play.html?f=' + encodeURIComponent(s.fileId); }
 
-  function makeUrl(s) {
-    const base = getPagesUrl();
-    if(!base||!base.startsWith('https://')) return '';
-    if(s.shortId) return base+'/play.html?id='+s.shortId;
-    return base+'/play.html?f='+encodeURIComponent(s.fileId);
-  }
-  function isValidUrl(url){ return !!url&&url.startsWith('https://')&&url.includes('play.html'); }
-
-  // ── 학교 목록 ──
   async function loadSchools() {
-    const url = getGasUrl();
-    if(!url) return;
-    try{
-      const res  = await fetch(url+'?action=schools');
+    try {
+      const res  = await fetch(getGasUrl() + '?action=schools');
       const data = await res.json();
       const sel  = document.getElementById('schoolSelect');
-      sel.innerHTML='<option value="">— 학교를 선택하세요 —</option>'+
-        data.schools.map(s=>`<option value="${s}">${s}</option>`).join('');
-      document.getElementById('settingsErr').style.display='none';
+      sel.innerHTML = '<option value="">— 학교를 선택하세요 —</option>' +
+        data.schools.map(s => `<option value="${s}">${s}</option>`).join('');
+      document.getElementById('settingsErr').style.display = 'none';
       showMsg('settingsOk','✓ 연결 성공');
-    }catch{
+    } catch {
       showMsg('settingsErr','연결 실패 — GAS URL을 확인하세요.');
     }
   }
 
-  // ── 학생 목록 ──
   async function loadStudents() {
-    const school=document.getElementById('schoolSelect').value;
-    if(!school)return;
-    document.getElementById('loadingRow').style.display='flex';
-    document.getElementById('resultSection').style.display='none';
-    try{
-      const res=await fetch(getGasUrl()+'?action=list&school='+encodeURIComponent(school));
-      const data=await res.json();
-      students=data.students||[];
-      document.getElementById('loadingRow').style.display='none';
-      document.getElementById('resultSection').style.display='block';
-      document.getElementById('statCount').textContent=students.length;
-      document.getElementById('statSchool').textContent=school;
+    const school = document.getElementById('schoolSelect').value;
+    if (!school) return;
+    document.getElementById('loadingRow').style.display    = 'flex';
+    document.getElementById('resultSection').style.display = 'none';
+    try {
+      const res  = await fetch(getGasUrl() + '?action=list&school=' + encodeURIComponent(school));
+      const data = await res.json();
+      students   = data.students || [];
+      document.getElementById('loadingRow').style.display    = 'none';
+      document.getElementById('resultSection').style.display = 'block';
+      document.getElementById('statCount').textContent  = students.length;
+      document.getElementById('statSchool').textContent = school;
       renderGrid();
-    }catch{
-      document.getElementById('loadingRow').style.display='none';
+    } catch {
+      document.getElementById('loadingRow').style.display = 'none';
       alert('학생 목록을 불러오는 데 실패했습니다.');
     }
   }
 
-  function renderGrid(){
-    const grid=document.getElementById('qrGrid');
-    if(!students.length){ grid.innerHTML='<div class="empty">녹음된 학생이 없습니다</div>'; return; }
-    grid.innerHTML=students.map((s,i)=>{
-      const url=makeUrl(s), valid=isValidUrl(url);
-      return `<div class="qr-card">
+  function renderGrid() {
+    const grid = document.getElementById('qrGrid');
+    if (!students.length) { grid.innerHTML = '<div class="empty">녹음된 학생이 없습니다</div>'; return; }
+    grid.innerHTML = students.map((s,i) => `
+      <div class="qr-card">
         <div class="qr-box" id="qr-box-${i}"></div>
         <div class="qr-name">${s.name}</div>
         <div class="qr-cls">${s.className}</div>
-        <div class="qr-url ${valid?'valid':'error'}">${valid?url:'⚠️ URL 오류 — 설정 탭 확인'}</div>
-      </div>`;
-    }).join('');
-    students.forEach((s,i)=>{
-      const url=makeUrl(s);
-      if(!isValidUrl(url))return;
-      new QRCode(document.getElementById('qr-box-'+i),{text:url,width:110,height:110,colorDark:'#191919',colorLight:'#ffffff',correctLevel:QRCode.CorrectLevel.L});
+      </div>`).join('');
+    students.forEach((s,i) => {
+      new QRCode(document.getElementById('qr-box-'+i), {
+        text: makeUrl(s), width: 128, height: 128,
+        colorDark: '#191919', colorLight: '#ffffff',
+        correctLevel: QRCode.CorrectLevel.L
+      });
     });
   }
 
-  async function downloadZip(){
-    if(!getPagesUrl().startsWith('https://')){ alert('GitHub Pages URL을 설정 탭에서 확인하세요.'); return; }
-    if(!students.length) return alert('학생 데이터가 없습니다.');
-    const school=document.getElementById('schoolSelect').value;
-    const btn=document.getElementById('dlBtn');
-    btn.disabled=true; btn.textContent='생성 중…';
-    const zip=new JSZip();
-    await Promise.all(students.map((s,i)=>new Promise(resolve=>{
-      const box=document.getElementById('qr-box-'+i);
-      const canvas=box&&box.querySelector('canvas');
-      if(!canvas)return resolve();
-      canvas.toBlob(blob=>{zip.file(school+'_'+s.name+'_'+s.className+'.png',blob);resolve()},'image/png');
+  async function downloadZip() {
+    if (!students.length) return alert('학생 데이터가 없습니다.');
+    const school = document.getElementById('schoolSelect').value;
+    const btn    = document.getElementById('dlBtn');
+    btn.disabled = true; btn.textContent = '생성 중…';
+    const zip = new JSZip();
+    await Promise.all(students.map((s,i) => new Promise(resolve => {
+      const canvas = document.getElementById('qr-box-'+i)?.querySelector('canvas');
+      if (!canvas) return resolve();
+      canvas.toBlob(blob => { zip.file(school+'_'+s.name+'_'+s.className+'.png', blob); resolve(); }, 'image/png');
     })));
-    const csvRows=[['학교','이름','학반','QR URL']];
-    students.forEach(s=>csvRows.push([school,s.name,s.className,makeUrl(s)]));
-    zip.file('학생목록.csv','\uFEFF'+csvRows.map(r=>r.join(',')).join('\n'));
-    saveAs(await zip.generateAsync({type:'blob'}),school+'_QR코드.zip');
-    btn.disabled=false; btn.textContent='ZIP 다운로드';
+    const csvRows = [['학교','이름','학반','QR URL']];
+    students.forEach(s => csvRows.push([school, s.name, s.className, makeUrl(s)]));
+    zip.file('학생목록.csv', '\uFEFF' + csvRows.map(r => r.join(',')).join('\n'));
+    saveAs(await zip.generateAsync({type:'blob'}), school+'_QR코드.zip');
+    btn.disabled = false; btn.textContent = 'ZIP 다운로드';
   }
 
-  // ── ★ 비밀번호 관리 ──
-  async function loadPasswords(){
-    try{
-      const res=await fetch(getGasUrl()+'?action=getPasswords');
-      const data=await res.json();
-      const list=document.getElementById('pwList');
-      if(!data.passwords||!data.passwords.length){
-        list.innerHTML='<div class="pw-empty">설정된 비밀번호가 없습니다</div>'; return;
+  /* ── 비밀번호 관리 ── */
+  async function loadPasswords() {
+    try {
+      const res  = await fetch(getGasUrl() + '?action=getPasswords');
+      const data = await res.json();
+      const list = document.getElementById('pwList');
+      if (!data.passwords || !data.passwords.length) {
+        list.innerHTML = '<div class="pw-empty">설정된 비밀번호가 없습니다</div>'; return;
       }
-      list.innerHTML=data.passwords.map(p=>`
-        <div class="pw-row">
+      list.innerHTML = data.passwords.map(p => `
+        <div class="pw-row" id="pwrow-${encodeURIComponent(p.school)}">
           <span class="pw-school">${p.school}</span>
           <span class="pw-value">${p.password}</span>
-          <button class="pw-del" onclick="deletePassword('${p.school}')">삭제</button>
+          <button class="pw-del" onclick="deletePassword('${p.school.replace(/'/g,"\\'")}')">삭제</button>
         </div>`).join('');
-    }catch{
-      document.getElementById('pwList').innerHTML='<div class="pw-empty">불러오기 실패</div>';
+    } catch {
+      document.getElementById('pwList').innerHTML = '<div class="pw-empty">불러오기 실패</div>';
     }
   }
 
-  async function savePassword(){
-    const school=document.getElementById('pwSchool').value.trim();
-    const pw=document.getElementById('pwValue').value.trim();
-    if(!school||!pw){ showMsg('pwErr','학교명과 비밀번호를 모두 입력하세요.'); return; }
-    try{
-      const res=await fetch(getGasUrl(),{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action:'setPassword',school,password:pw}),redirect:'follow'});
-      const data=await res.json();
-      if(data.success){
+  async function savePassword() {
+    const school = document.getElementById('pwSchool').value.trim();
+    const pw     = document.getElementById('pwValue').value.trim();
+    if (!school || !pw) { showMsg('pwErr','학교명과 비밀번호를 모두 입력하세요.'); return; }
+    try {
+      const res  = await fetch(getGasUrl(), {
+        method: 'POST',
+        headers: {'Content-Type':'text/plain;charset=utf-8'},
+        body: JSON.stringify({action:'setPassword', school, password:pw}),
+        redirect: 'follow'
+      });
+      const data = await res.json();
+      if (data.success) {
         showMsg('pwOk','✓ 비밀번호가 저장됐습니다.');
-        document.getElementById('pwSchool').value='';
-        document.getElementById('pwValue').value='';
+        document.getElementById('pwSchool').value = '';
+        document.getElementById('pwValue').value  = '';
         loadPasswords();
-      }else throw new Error(data.error);
-    }catch(err){ showMsg('pwErr','저장 실패: '+err.message); }
+      } else throw new Error(data.error);
+    } catch (err) { showMsg('pwErr','저장 실패: ' + err.message); }
   }
 
-  async function deletePassword(school){
-    if(!confirm(school+' 비밀번호를 삭제할까요?')) return;
-    try{
-      const res  = await fetch(getGasUrl(),{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action:'deletePassword',school}),redirect:'follow'});
+  /* ★ 삭제 — deletePassword 액션으로 행 자체 삭제 */
+  async function deletePassword(school) {
+    if (!confirm(school + ' 비밀번호를 삭제할까요?')) return;
+
+    // 버튼 비활성화
+    const row = document.getElementById('pwrow-' + encodeURIComponent(school));
+    if (row) row.querySelector('.pw-del').disabled = true;
+
+    try {
+      const res  = await fetch(getGasUrl(), {
+        method: 'POST',
+        headers: {'Content-Type':'text/plain;charset=utf-8'},
+        body: JSON.stringify({action:'deletePassword', school}),
+        redirect: 'follow'
+      });
       const data = await res.json();
-      if(data.success){
-        showMsg('pwOk','✓ 삭제됐습니다.');
+      if (data.success) {
+        showMsg('pwDelOk','✓ 삭제됐습니다.');
         loadPasswords();
       } else {
-        alert('삭제 실패: ' + (data.error || '알 수 없는 오류'));
+        showMsg('pwDelErr','삭제 실패: ' + (data.error || '알 수 없는 오류'));
+        if (row) row.querySelector('.pw-del').disabled = false;
       }
-    }catch(e){ alert('삭제 중 오류가 발생했습니다.'); }
+    } catch (err) {
+      showMsg('pwDelErr','오류: ' + err.message);
+      if (row) row.querySelector('.pw-del').disabled = false;
+    }
   }
 
-  function showMsg(id,msg){ const el=document.getElementById(id); el.textContent=msg; el.style.display='block'; }
+  function showMsg(id, msg) {
+    const el = document.getElementById(id);
+    el.textContent = msg; el.style.display = 'block';
+    setTimeout(() => { el.style.display = 'none'; }, 4000);
+  }
 </script>
 </body>
 </html>
