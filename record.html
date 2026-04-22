@@ -13,20 +13,20 @@
   --bg:        #F7F8FA;
   --card:      #FFFFFF;
   --primary:   #3182F6;
-  --primary-lt:#5B9DF8;
-  --primary-bg:#EBF3FE;
+  --pri-lt:    #5B9DF8;
+  --pri-bg:    #EBF3FE;
   --border:    #E5E8EB;
   --text:      #191919;
   --sub:       #4E4E4E;
   --muted:     #8B95A1;
   --faint:     #C6CAD0;
+  --input-bg:  #F2F4F6;
   --red:       #F04452;
   --red-bg:    #FFF2F3;
   --red-border:#FDDDDD;
   --green:     #2BA25B;
   --green-bg:  #F0FAF4;
   --orange:    #E07C2A;
-  --input-bg:  #F2F4F6;
   --shadow:    0 1px 3px rgba(0,0,0,.06), 0 4px 16px rgba(0,0,0,.05);
 }
 
@@ -41,98 +41,106 @@ body {
 
 @keyframes up     { from { opacity:0; transform:translateY(18px) } to { opacity:1; transform:none } }
 @keyframes fadeIn { from { opacity:0 } to { opacity:1 } }
-@keyframes spin   { to { transform:rotate(360deg) } }
+@keyframes spin   { to   { transform:rotate(360deg) } }
 @keyframes wave   { 0%,100%{ height:3px; opacity:.2 } 50%{ height:34px; opacity:.85 } }
 @keyframes pulse  { 0%,100%{ box-shadow:0 0 0 0 rgba(240,68,82,.25) } 50%{ box-shadow:0 0 0 14px rgba(240,68,82,0) } }
 @keyframes bloom  { 0%{ transform:scale(.75); opacity:0 } 60%{ transform:scale(1.08) } 100%{ transform:scale(1); opacity:1 } }
+@keyframes shake  { 0%,100%{ transform:translateX(0) } 20%,60%{ transform:translateX(-8px) } 40%,80%{ transform:translateX(8px) } }
 @keyframes urgent { 0%,100%{ opacity:1 } 50%{ opacity:.45 } }
 
-.wrap { width:100%; max-width:400px; animation:up .55s cubic-bezier(.22,1,.36,1) both; }
+.wrap { width:100%; max-width:400px; }
 
-/* 상단 헤더 */
-.top-header { margin-bottom: 2rem; }
-.school-name {
-  font-size: 26px; font-weight: 700;
-  color: var(--text); line-height: 1.3;
-  letter-spacing: -.5px; margin-bottom: .375rem;
-}
-.school-name.placeholder { color: var(--muted); font-size: 18px; }
-.page-desc { font-size: 14px; color: var(--muted); font-weight: 300; }
+/* ── 상단 헤더 ── */
+.top-header { margin-bottom: 2rem; animation: up .5s cubic-bezier(.22,1,.36,1) both; }
+.school-name { font-size:26px; font-weight:700; color:var(--text); line-height:1.3; letter-spacing:-.5px; margin-bottom:.25rem; }
+.school-name.placeholder { color:var(--muted); font-size:18px; }
+.page-desc { font-size:14px; color:var(--muted); font-weight:300; }
 
-/* 카드 */
-.card {
-  background: var(--card); border-radius: 16px;
-  padding: 1.5rem; margin-bottom: .75rem;
-  box-shadow: var(--shadow);
-}
-.card-title { font-size: 13px; font-weight: 600; color: var(--sub); margin-bottom: 1rem; }
+/* ── 카드 ── */
+.card { background:var(--card); border-radius:16px; padding:1.5rem; margin-bottom:.75rem; box-shadow:var(--shadow); }
+.card-title { font-size:13px; font-weight:600; color:var(--sub); margin-bottom:1rem; }
 
-/* 인풋 */
-.field { margin-bottom: .875rem; }
-.field:last-child { margin-bottom: 0; }
+/* ── 인풋 ── */
+.field { margin-bottom:.875rem; }
+.field:last-child { margin-bottom:0; }
 .lbl { display:block; font-size:12px; font-weight:500; color:var(--muted); margin-bottom:.4rem; }
 input {
-  width: 100%; padding: 13px 15px;
-  background: var(--input-bg); border: 1.5px solid transparent;
-  border-radius: 10px; color: var(--text);
-  font-size: 15px; font-family: 'Noto Sans KR', sans-serif;
-  outline: none; transition: border-color .18s, background .18s;
+  width:100%; padding:13px 15px;
+  background:var(--input-bg); border:1.5px solid transparent;
+  border-radius:10px; color:var(--text);
+  font-size:15px; font-family:'Noto Sans KR',sans-serif;
+  outline:none; transition:border-color .18s, background .18s;
 }
-input:focus { background: var(--card); border-color: var(--primary-lt); }
-input::placeholder { color: var(--faint); }
+input:focus { background:var(--card); border-color:var(--pri-lt); }
+input::placeholder { color:var(--faint); }
+input:disabled { opacity:.5; cursor:not-allowed; }
 
-/* 셀렉트 */
-.class-row { display: flex; gap: 8px; }
+/* ── 셀렉트 ── */
+.class-row { display:flex; gap:8px; }
 select {
-  flex: 1; padding: 13px 10px;
-  background: var(--input-bg); border: 1.5px solid transparent;
-  border-radius: 10px; color: var(--text);
-  font-size: 15px; font-family: 'Noto Sans KR', sans-serif;
-  outline: none; transition: border-color .18s, background .18s;
-  appearance: none; -webkit-appearance: none;
-  text-align: center; cursor: pointer;
+  flex:1; padding:13px 10px;
+  background:var(--input-bg); border:1.5px solid transparent;
+  border-radius:10px; color:var(--text);
+  font-size:15px; font-family:'Noto Sans KR',sans-serif;
+  outline:none; transition:border-color .18s, background .18s;
+  appearance:none; -webkit-appearance:none;
+  text-align:center; cursor:pointer;
 }
-select:focus { background: var(--card); border-color: var(--primary-lt); }
-select option { background: var(--card); }
+select:focus { background:var(--card); border-color:var(--pri-lt); }
+select:disabled { opacity:.5; cursor:not-allowed; }
+select option { background:var(--card); }
 
-/* 타이머 */
-.timer {
-  text-align: center; font-size: 44px; font-weight: 700;
-  font-variant-numeric: tabular-nums; letter-spacing: 2px;
-  color: var(--text); line-height: 1;
-  margin-bottom: .875rem; transition: color .3s;
+/* ── 버튼들 ── */
+.btn-row { display:flex; gap:8px; margin-bottom:8px; }
+.btn {
+  flex:1; padding:13px 0;
+  border-radius:10px; border:none;
+  font-size:14px; font-family:'Noto Sans KR',sans-serif;
+  font-weight:500; cursor:pointer;
+  transition:background .15s, transform .1s, opacity .15s;
+  background:var(--input-bg); color:var(--sub);
 }
-.timer.rec  { color: var(--red); }
-.timer.warn { color: var(--orange); animation: urgent .8s ease-in-out infinite; }
+.btn:active   { transform:scale(.97); }
+.btn:disabled { opacity:.35; cursor:not-allowed; transform:none; }
+.btn-primary  { background:var(--primary); color:#fff; }
+.btn-primary:hover:not(:disabled) { background:var(--pri-lt); }
+.btn-listen   { background:var(--green-bg); color:var(--green); }
+.btn-listen:hover:not(:disabled) { background:#E4F5EC; }
+.btn-listen.on { box-shadow:0 0 0 2px rgba(43,162,91,.2); }
+.btn-retry:hover:not(:disabled) { background:#ECEEF1; }
+.btn-save  { background:var(--primary); color:#fff; }
+.btn-save:hover:not(:disabled) { background:var(--pri-lt); }
 
-/* 프로그레스 */
+/* ── 알림 ── */
+.alert { border-radius:10px; padding:.875rem 1rem; font-size:13px; line-height:1.9; margin-top:.75rem; display:none; text-align:center; }
+.alert.err  { background:var(--red-bg);  border:1px solid var(--red-border); color:var(--red); }
+.alert.load { background:var(--input-bg); color:var(--muted); }
+.spin { display:inline-block; width:12px; height:12px; border:2px solid var(--faint); border-top-color:var(--primary); border-radius:50%; animation:spin .7s linear infinite; vertical-align:middle; margin-right:7px; }
+
+/* ── 타이머 ── */
+.timer { text-align:center; font-size:44px; font-weight:700; font-variant-numeric:tabular-nums; letter-spacing:2px; color:var(--text); line-height:1; margin-bottom:.875rem; transition:color .3s; }
+.timer.rec  { color:var(--red); }
+.timer.warn { color:var(--orange); animation:urgent .8s ease-in-out infinite; }
 .rec-progress { width:100%; height:3px; background:var(--border); border-radius:99px; margin-bottom:.625rem; overflow:hidden; }
-.rec-progress-bar { height:100%; width:0%; border-radius:99px; background:var(--primary-lt); transition:width .5s linear, background .4s; }
-.rec-progress-bar.warn   { background: var(--orange); }
-.rec-progress-bar.danger { background: var(--red); }
-
-.time-row {
-  display: flex; justify-content: space-between;
-  font-size: 12px; color: var(--muted);
-  margin-bottom: 1.125rem; font-variant-numeric: tabular-nums;
-}
-.time-remaining { font-weight: 500; transition: color .3s; }
-.time-remaining.warn   { color: var(--orange); }
-.time-remaining.danger { color: var(--red); }
-
-/* 상태 */
+.rec-progress-bar { height:100%; width:0%; border-radius:99px; background:var(--pri-lt); transition:width .5s linear, background .4s; }
+.rec-progress-bar.warn   { background:var(--orange); }
+.rec-progress-bar.danger { background:var(--red); }
+.time-row { display:flex; justify-content:space-between; font-size:12px; color:var(--muted); margin-bottom:1.125rem; font-variant-numeric:tabular-nums; }
+.time-remaining { font-weight:500; transition:color .3s; }
+.time-remaining.warn   { color:var(--orange); }
+.time-remaining.danger { color:var(--red); }
 .status { text-align:center; font-size:13px; color:var(--muted); min-height:20px; margin-bottom:1.25rem; }
 
-/* 파형 */
+/* ── 파형 ── */
 .waveform { display:flex; align-items:center; justify-content:center; gap:4px; height:44px; margin-bottom:1.25rem; }
-.bar { width:3px; border-radius:99px; background:var(--primary-lt); height:3px; opacity:.2; }
+.bar { width:3px; border-radius:99px; background:var(--pri-lt); height:3px; opacity:.2; }
 .waveform.recording .bar { animation:wave 1s ease-in-out infinite; opacity:1; }
 .waveform.playing   .bar { animation:wave 1.4s ease-in-out infinite; background:var(--green); opacity:1; }
 
-/* 녹음 버튼 */
+/* ── 녹음 버튼 ── */
 .rec-btn {
   width:68px; height:68px; border-radius:50%; border:none;
-  background:var(--primary-bg); color:var(--primary);
+  background:var(--pri-bg); color:var(--primary);
   cursor:pointer; display:flex; align-items:center; justify-content:center;
   margin:0 auto 1.25rem; font-size:26px;
   transition:transform .12s, box-shadow .2s, background .2s;
@@ -142,35 +150,45 @@ select option { background: var(--card); }
 .rec-btn:active { transform:scale(.93); }
 .rec-btn.recording { background:var(--red-bg); color:var(--red); animation:pulse 1.3s ease-in-out infinite; }
 
-/* 버튼들 */
-.btn-row { display:flex; gap:8px; margin-bottom:8px; }
-.btn {
-  flex:1; padding:13px 0; border-radius:10px; border:none;
-  font-size:14px; font-family:'Noto Sans KR',sans-serif; font-weight:500; cursor:pointer;
-  transition:background .15s, transform .1s, opacity .15s;
-  background:var(--input-bg); color:var(--sub);
+/* ── 비밀번호 화면 ── */
+#pwScreen { animation: up .5s cubic-bezier(.22,1,.36,1) both; }
+.pw-icon { font-size:40px; text-align:center; margin-bottom:1rem; }
+.pw-desc { font-size:13px; color:var(--muted); text-align:center; line-height:1.8; margin-bottom:1.25rem; }
+.pw-input-wrap { position:relative; }
+.pw-input-wrap input { padding-right:52px; letter-spacing:2px; font-size:18px; font-weight:600; text-align:center; }
+.pw-toggle {
+  position:absolute; right:12px; top:50%; transform:translateY(-50%);
+  background:none; border:none; cursor:pointer;
+  font-size:16px; color:var(--muted); padding:4px;
 }
-.btn:active   { transform:scale(.97); }
-.btn:disabled { opacity:.35; cursor:not-allowed; transform:none; }
-.btn-listen { background:var(--green-bg); color:var(--green); }
-.btn-listen:hover:not(:disabled) { background:#E4F5EC; }
-.btn-listen.on { box-shadow:0 0 0 2px rgba(43,162,91,.2); }
-.btn-retry:hover:not(:disabled) { background:#ECEEF1; }
-.btn-save { background:var(--primary); color:#fff; }
-.btn-save:hover:not(:disabled) { background:var(--primary-lt); }
+.pw-error { color:var(--red); font-size:12px; text-align:center; margin-top:.625rem; min-height:18px; }
+.pw-error.shake { animation:shake .4s ease; }
+.pw-btn {
+  width:100%; padding:14px; border-radius:10px; border:none;
+  background:var(--primary); color:#fff;
+  font-size:15px; font-family:'Noto Sans KR',sans-serif; font-weight:600;
+  cursor:pointer; margin-top:1rem;
+  transition:background .15s, transform .1s;
+  display:flex; align-items:center; justify-content:center; gap:8px;
+}
+.pw-btn:hover:not(:disabled) { background:var(--pri-lt); }
+.pw-btn:disabled { opacity:.5; cursor:not-allowed; }
+.pw-btn .btn-spin { display:none; width:14px; height:14px; border:2px solid rgba(255,255,255,.4); border-top-color:#fff; border-radius:50%; animation:spin .7s linear infinite; }
+.pw-btn.loading .btn-spin { display:block; }
+.pw-btn.loading .btn-label { opacity:.7; }
 
-/* 알림 */
-.alert { border-radius:10px; padding:.875rem 1rem; font-size:13px; line-height:1.9; margin-top:.75rem; display:none; text-align:center; }
-.alert.err  { background:var(--red-bg); border:1px solid var(--red-border); color:var(--red); }
-.alert.load { background:var(--input-bg); color:var(--muted); }
-.spin { display:inline-block; width:12px; height:12px; border:2px solid var(--faint); border-top-color:var(--primary); border-radius:50%; animation:spin .7s linear infinite; vertical-align:middle; margin-right:7px; }
-
-/* 완료 */
+/* ── 완료 화면 ── */
 .done { display:none; text-align:center; padding:2rem 0; animation:fadeIn .6s ease both; }
 .done .icon { font-size:56px; display:block; margin-bottom:1.25rem; animation:bloom .6s cubic-bezier(.22,1,.36,1) both; }
 .done .title { font-size:20px; font-weight:700; color:var(--text); margin-bottom:.5rem; letter-spacing:-.3px; }
 .done .msg   { font-size:14px; color:var(--muted); line-height:2.1; font-weight:300; }
 .done-divider { width:32px; height:1px; background:var(--border); margin:1.5rem auto; }
+
+/* ── 이미 제출됨 화면 ── */
+.submitted-wrap { display:none; text-align:center; padding:2rem 0; animation:fadeIn .5s ease both; }
+.submitted-icon  { font-size:52px; display:block; margin-bottom:1rem; }
+.submitted-title { font-size:19px; font-weight:700; color:var(--text); margin-bottom:.5rem; }
+.submitted-msg   { font-size:13px; color:var(--muted); line-height:2; font-weight:300; }
 
 footer { margin-top:2.5rem; text-align:center; font-size:12px; color:var(--faint); letter-spacing:.3px; font-weight:300; }
 </style>
@@ -184,12 +202,51 @@ footer { margin-top:2.5rem; text-align:center; font-size:12px; color:var(--faint
     const SCHOOL  = decodeURIComponent(params.get('school') || '');
   </script>
 
+  <!-- 상단 헤더 -->
   <div class="top-header">
     <div class="school-name" id="schoolName"></div>
     <div class="page-desc">졸업 음성 메시지 녹음</div>
   </div>
 
-  <div id="formWrap">
+  <!-- ★ 비밀번호 입력 화면 -->
+  <div id="pwScreen" style="display:none">
+    <div class="card">
+      <div class="pw-icon">🔒</div>
+      <div class="pw-desc">
+        선생님께 받은 비밀번호를 입력하세요.<br>
+        확인 후 녹음 화면으로 이동합니다.
+      </div>
+      <div class="pw-input-wrap">
+        <input id="pwInput" type="password" placeholder="비밀번호"
+          maxlength="20"
+          onkeydown="if(event.key==='Enter')checkPassword()"
+          oninput="document.getElementById('pwError').textContent=''" />
+        <button class="pw-toggle" onclick="togglePwVisible()" title="비밀번호 표시">👁</button>
+      </div>
+      <div class="pw-error" id="pwError"></div>
+      <button class="pw-btn" id="pwBtn" onclick="checkPassword()">
+        <span class="btn-spin"></span>
+        <span class="btn-label">확인</span>
+      </button>
+    </div>
+    <footer>소중한 순간은 늘 여기에 · 늘스튜디오</footer>
+  </div>
+
+  <!-- ★ 이미 제출된 경우 -->
+  <div class="submitted-wrap" id="submittedWrap">
+    <span class="submitted-icon">✅</span>
+    <div class="submitted-title">이미 녹음이 완료됐어요</div>
+    <div class="done-divider"></div>
+    <div class="submitted-msg" id="submittedMsg">
+      이미 녹음이 저장되어 있어요.<br>
+      졸업앨범 QR코드로 다시 들을 수 있어요 🎓
+    </div>
+    <footer style="margin-top:2.5rem">소중한 순간은 늘 여기에 · 늘스튜디오</footer>
+  </div>
+
+  <!-- 녹음 폼 -->
+  <div id="formWrap" style="display:none">
+
     <div class="card" id="schoolCard" style="display:none">
       <div class="card-title">학교 이름</div>
       <div class="field" style="margin-bottom:0">
@@ -262,35 +319,89 @@ footer { margin-top:2.5rem; text-align:center; font-size:12px; color:var(--faint
     </div>
   </div>
 
+  <!-- 완료 화면 -->
   <div class="done" id="done">
     <span class="icon">🎉</span>
     <div class="title" id="doneTitle"></div>
     <div class="done-divider"></div>
     <div class="msg">졸업을 진심으로 축하해요.<br>졸업앨범 QR코드를 스캔하면<br>이 목소리를 다시 들을 수 있어요 🎓</div>
+    <footer style="margin-top:2.5rem">소중한 순간은 늘 여기에 · 늘스튜디오</footer>
   </div>
 
-  <footer>소중한 순간은 늘 여기에 · 늘스튜디오</footer>
 </div>
 
 <script>
-  const schoolNameEl = document.getElementById('schoolName');
-  const schoolCard   = document.getElementById('schoolCard');
+  const $ = id => document.getElementById(id);
+
+  // ── 초기화 ──
+  const schoolNameEl = $('schoolName');
   if (SCHOOL) {
     schoolNameEl.textContent = SCHOOL;
   } else {
     schoolNameEl.textContent = '졸업앨범 녹음';
     schoolNameEl.classList.add('placeholder');
-    schoolCard.style.display = 'block';
+    $('schoolCard').style.display = 'block';
   }
 
+  // ── 비밀번호 화면 표시 ──
+  $('pwScreen').style.display = 'block';
+
+  // ── 비밀번호 표시/숨김 ──
+  function togglePwVisible() {
+    const inp = $('pwInput');
+    inp.type = inp.type === 'password' ? 'text' : 'password';
+  }
+
+  // ── 비밀번호 확인 ──
+  async function checkPassword() {
+    const pw  = $('pwInput').value.trim();
+    const btn = $('pwBtn');
+    if (!pw) { showPwError('비밀번호를 입력해 주세요.'); return; }
+    if (!SCHOOL) { enterRecordScreen(); return; } // 학교 미지정이면 바로 진입
+
+    btn.disabled = true;
+    btn.classList.add('loading');
+    try {
+      const res  = await fetch(GAS_URL + '?action=checkPassword'
+        + '&school=' + encodeURIComponent(SCHOOL)
+        + '&pw='     + encodeURIComponent(pw));
+      const data = await res.json();
+      if (data.ok) {
+        enterRecordScreen();
+      } else {
+        showPwError('비밀번호가 틀렸습니다. 선생님께 확인해 주세요.');
+      }
+    } catch {
+      showPwError('확인 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.');
+    } finally {
+      btn.disabled = false;
+      btn.classList.remove('loading');
+    }
+  }
+
+  function showPwError(msg) {
+    const el = $('pwError');
+    el.textContent = msg;
+    el.classList.remove('shake');
+    void el.offsetWidth; // reflow for animation restart
+    el.classList.add('shake');
+    $('pwInput').value = '';
+    $('pwInput').focus();
+  }
+
+  function enterRecordScreen() {
+    $('pwScreen').style.display  = 'none';
+    $('formWrap').style.display  = 'block';
+  }
+
+  // ── 녹음 로직 ──
   let recorder=null, chunks=[], isRec=false;
   let timerInterval=null, secs=0, blob=null;
   let mimeType='audio/webm';
   const MIMES=['audio/webm;codecs=opus','audio/webm','audio/ogg;codecs=opus','audio/mp4'];
   for(const m of MIMES){if(MediaRecorder.isTypeSupported(m)){mimeType=m;break;}}
 
-  const $=id=>document.getElementById(id);
-  const pad=n=>String(n).padStart(2,'0');
+  const pad = n => String(n).padStart(2,'0');
 
   function tick(){
     secs++;
@@ -303,23 +414,25 @@ footer { margin-top:2.5rem; text-align:center; font-size:12px; color:var(--faint
     else if(remain<=10){bar.className='rec-progress-bar warn';$('remainLbl').className='time-remaining warn';}
     if(secs>=MAX_SEC){stopRec();setStatus('40초 제한에 도달해 자동으로 정지됐습니다');}
   }
+
   function resetTimerUI(){
     $('timer').textContent='00:00';$('timer').className='timer';
     $('elapsedLbl').textContent='0초';$('remainLbl').textContent=MAX_SEC+'초 남음';
     $('remainLbl').className='time-remaining';$('recBar').style.width='0%';$('recBar').className='rec-progress-bar';
   }
+
   function getClassName(){
     const ban=$('selectBan').value, num=$('selectNum').value;
-    if(!ban||!num) return '';
-    return ban+'반 '+num+'번';
+    return (!ban||!num) ? '' : ban+'반 '+num+'번';
   }
+
   async function toggleRecord(){
     if(!isRec){
       try{
         const stream=await navigator.mediaDevices.getUserMedia({audio:true});
         chunks=[];
-        const options={mimeType,audioBitsPerSecond:32000};
-        try{recorder=new MediaRecorder(stream,options);}catch{recorder=new MediaRecorder(stream,{mimeType});}
+        try{recorder=new MediaRecorder(stream,{mimeType,audioBitsPerSecond:32000});}
+        catch{recorder=new MediaRecorder(stream,{mimeType});}
         recorder.ondataavailable=e=>{if(e.data.size>0)chunks.push(e.data);};
         recorder.onstop=()=>{
           blob=new Blob(chunks,{type:mimeType});
@@ -327,9 +440,8 @@ footer { margin-top:2.5rem; text-align:center; font-size:12px; color:var(--faint
           $('listenBtn').disabled=false;$('retryBtn').disabled=false;$('saveBtn').disabled=false;
           stream.getTracks().forEach(t=>t.stop());
         };
-        recorder.start(100); isRec=true; secs=0; resetTimerUI();
-        $('timer').className='timer rec';
-        timerInterval=setInterval(tick,1000);
+        recorder.start(100);isRec=true;secs=0;resetTimerUI();
+        $('timer').className='timer rec';timerInterval=setInterval(tick,1000);
         $('recBtn').className='rec-btn recording';$('recBtn').textContent='⏹';
         $('wave').className='waveform recording';
         $('listenBtn').disabled=true;$('retryBtn').disabled=true;$('saveBtn').disabled=true;
@@ -337,46 +449,73 @@ footer { margin-top:2.5rem; text-align:center; font-size:12px; color:var(--faint
       }catch{showErr('마이크 권한이 필요합니다.<br>브라우저에서 마이크 사용을 허용해 주세요.');}
     }else{stopRec();}
   }
+
   function stopRec(){
     if(!isRec)return;
     recorder.stop();isRec=false;clearInterval(timerInterval);
     $('recBtn').className='rec-btn';$('recBtn').textContent='⏺';$('wave').className='waveform';
     if(!$('status').textContent.includes('자동'))setStatus('녹음 완료 — 들어보고 마음에 들면 저장하세요');
   }
+
   function toggleListen(){
     const audio=$('preview');
-    if(audio.paused)audio.play();
-    else{audio.pause();audio.currentTime=0;}
+    if(audio.paused)audio.play();else{audio.pause();audio.currentTime=0;}
   }
+
   function retry(){
     blob=null;$('preview').pause();$('preview').src='';
     $('listenBtn').disabled=true;$('listenBtn').textContent='다시 듣기 ▶';$('listenBtn').classList.remove('on');
     $('retryBtn').disabled=true;$('saveBtn').disabled=true;$('wave').className='waveform';
     resetTimerUI();clearAlerts();setStatus('버튼을 눌러 다시 녹음하세요');
   }
+
   async function save(){
-    const school=SCHOOL||$('inputSchool').value.trim();
-    const name=$('inputName').value.trim();
-    const className=getClassName();
-    if(!school)return showErr('학교 이름을 입력해 주세요.');
-    if(!name)return showErr('이름을 입력해 주세요.');
-    if(!className)return showErr('반과 번호를 선택해 주세요.');
-    if(!blob)return showErr('먼저 녹음을 완료해 주세요.');
-    $('preview').pause();clearAlerts();$('alertLoad').style.display='block';
+    const school    = SCHOOL || $('inputSchool').value.trim();
+    const name      = $('inputName').value.trim();
+    const className = getClassName();
+    if(!school)    return showErr('학교 이름을 입력해 주세요.');
+    if(!name)      return showErr('이름을 입력해 주세요.');
+    if(!className) return showErr('반과 번호를 선택해 주세요.');
+    if(!blob)      return showErr('먼저 녹음을 완료해 주세요.');
+
+    $('preview').pause();clearAlerts();
+    $('alertLoad').style.display='block';
     $('listenBtn').disabled=true;$('saveBtn').disabled=true;$('retryBtn').disabled=true;
+
     try{
       const base64=await toBase64(blob);
-      const res=await fetch(GAS_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({school,name,className,audioBase64:base64,mimeType}),redirect:'follow'});
+      const res=await fetch(GAS_URL,{
+        method:'POST',
+        headers:{'Content-Type':'text/plain;charset=utf-8'},
+        body:JSON.stringify({school,name,className,audioBase64:base64,mimeType}),
+        redirect:'follow'
+      });
       const data=await res.json();
       $('alertLoad').style.display='none';
-      if(data.success){$('formWrap').style.display='none';$('doneTitle').textContent=name+'님의 목소리가 저장됐어요!';$('done').style.display='block';}
-      else throw new Error(data.error||'업로드 실패');
+
+      if(data.success){
+        // ★ 제출 완료 — localStorage에도 기록
+        try{ localStorage.setItem('submitted_'+school+'_'+name+'_'+className,'1'); }catch(e){}
+        $('formWrap').style.display='none';
+        $('doneTitle').textContent=name+'님의 목소리가 저장됐어요!';
+        $('done').style.display='block';
+
+      } else if(data.error === 'ALREADY_SUBMITTED'){
+        // ★ 서버에서 중복 감지
+        $('alertLoad').style.display='none';
+        $('formWrap').style.display='none';
+        $('submittedWrap').style.display='block';
+
+      } else {
+        throw new Error(data.error||'업로드 실패');
+      }
     }catch(err){
       $('alertLoad').style.display='none';
       $('listenBtn').disabled=false;$('saveBtn').disabled=false;$('retryBtn').disabled=false;
       showErr('저장 중 오류가 발생했어요.<br>'+err.message+'<br>잠시 후 다시 시도해 주세요.');
     }
   }
+
   function toBase64(b){return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result.split(',')[1]);r.onerror=rej;r.readAsDataURL(b);});}
   function setStatus(msg){$('status').textContent=msg;}
   function showErr(msg){$('alertErr').innerHTML=msg;$('alertErr').style.display='block';}
