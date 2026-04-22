@@ -4,228 +4,242 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>늘스튜디오 — 졸업 음성 메시지</title>
-<!-- lamejs: 브라우저에서 MP3 변환 -->
 <script src="https://cdn.jsdelivr.net/npm/lamejs@1.2.1/lame.min.js"></script>
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@300;400;600&family=Noto+Sans+KR:wght@300;400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&display=swap');
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
-  --cream:   #F7F8FA;
-  --card:    #FFFFFF;
-  --primary: #3182F6;
-  --pri-lt:  #5B9DF8;
-  --pri-bg:  #EBF3FE;
-  --border:  #E5E8EB;
-  --border-l:#EEF1F5;
-  --text:    #191919;
-  --sub:     #4E4E4E;
-  --muted:   #8B95A1;
-  --faint:   #C6CAD0;
-  --shadow:  rgba(0,0,0,.07);
-  --shadow2: rgba(0,0,0,.04);
+  --bg:        #F7F8FA;
+  --card:      #FFFFFF;
+  --primary:   #3182F6;
+  --pri-lt:    #5B9DF8;
+  --pri-bg:    #EBF3FE;
+  --border:    #E5E8EB;
+  --border-l:  #EEF1F5;
+  --text:      #191919;
+  --sub:       #4E4E4E;
+  --muted:     #8B95A1;
+  --faint:     #C6CAD0;
+  --green:     #2BA25B;
+  --shadow:    0 1px 3px rgba(0,0,0,.06), 0 4px 16px rgba(0,0,0,.05);
 }
 
 body {
   min-height: 100vh;
-  display: flex; flex-direction: column; align-items: center; justify-content: center;
-  background: var(--cream);
+  background: var(--bg);
   font-family: 'Noto Sans KR', sans-serif;
   color: var(--text);
-  padding: 2.5rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 2.5rem 1.25rem 3rem;
 }
 
-@keyframes rise   { from { opacity:0; transform:translateY(22px) } to { opacity:1; transform:none } }
+@keyframes up     { from { opacity:0; transform:translateY(18px) } to { opacity:1; transform:none } }
 @keyframes fadeIn { from { opacity:0 } to { opacity:1 } }
 @keyframes spin   { to   { transform:rotate(360deg) } }
-@keyframes wave   { 0%,100%{ height:3px; opacity:.18 } 50%{ height:34px; opacity:.85 } }
-@keyframes bloom  { 0%{ transform:scale(.75); opacity:0 } 60%{ transform:scale(1.09) } 100%{ transform:scale(1); opacity:1 } }
-@keyframes slide  { from{ opacity:0; transform:translateY(8px) } to{ opacity:1; transform:none } }
+@keyframes wave   { 0%,100%{ height:3px; opacity:.2 } 50%{ height:34px; opacity:.85 } }
+@keyframes bloom  { 0%{ transform:scale(.75); opacity:0 } 60%{ transform:scale(1.08) } 100%{ transform:scale(1); opacity:1 } }
 
 .wrap {
-  width: 100%; max-width: 340px;
-  animation: rise .65s cubic-bezier(.22,1,.36,1) both;
+  width: 100%; max-width: 400px;
+  animation: up .55s cubic-bezier(.22,1,.36,1) both;
 }
 
-.hr { display:flex; align-items:center; gap:10px; margin-bottom:2.25rem; }
-.hr-line { flex:1; height:1px; background:linear-gradient(to right,transparent,var(--border)); }
-.hr-line:last-child { background:linear-gradient(to left,transparent,var(--border)); }
-.hr-dot { width:5px; height:5px; border-radius:50%; background:var(--pri-lt); opacity:.7; }
-
-.identity { text-align:center; margin-bottom:1.75rem; padding:0 .5rem; }
-.cls-label {
-  font-size:15px; font-weight:400;
-  color:var(--primary); letter-spacing:.8px;
-  margin-bottom:.5rem; line-height:1.6;
+/* ── 상단 헤더 (record.html 동일 구조) ── */
+.top-header { margin-bottom: 2rem; }
+.school-name {
+  font-size: 26px; font-weight: 700;
+  color: var(--text); line-height: 1.3;
+  letter-spacing: -.5px; margin-bottom: .25rem;
 }
-.name-label {
-  font-family:'Noto Serif KR',serif;
-  font-size:22px; font-weight:600;
-  color:var(--text); letter-spacing:-.3px; line-height:1.45;
+.student-info {
+  font-size: 15px; font-weight: 400;
+  color: var(--primary); margin-bottom: .25rem;
+}
+.page-desc {
+  font-size: 14px; color: var(--muted); font-weight: 300;
 }
 
-.player-card {
-  background:var(--card);
-  border:1px solid var(--border-l);
-  border-radius:20px;
-  padding:1.875rem 1.5rem 1.5rem;
-  box-shadow:0 4px 24px var(--shadow), 0 1px 4px var(--shadow2);
-  margin-bottom:1rem;
+/* ── 카드 (record.html 동일) ── */
+.card {
+  background: var(--card);
+  border-radius: 16px;
+  padding: 1.5rem;
+  margin-bottom: .75rem;
+  box-shadow: var(--shadow);
+}
+.card-title {
+  font-size: 13px; font-weight: 600;
+  color: var(--sub); margin-bottom: 1.25rem;
 }
 
-.waveform { display:flex; align-items:center; justify-content:center; gap:4px; height:44px; margin-bottom:1.625rem; }
-.bar { width:3px; border-radius:99px; background:var(--pri-lt); height:3px; opacity:.2; }
-.waveform.playing .bar { animation:wave 1.35s ease-in-out infinite; }
+/* ── 파형 ── */
+.waveform {
+  display: flex; align-items: center; justify-content: center;
+  gap: 4px; height: 44px; margin-bottom: 1.375rem;
+}
+.bar { width: 3px; border-radius: 99px; background: var(--pri-lt); height: 3px; opacity: .2; }
+.waveform.playing .bar { animation: wave 1.35s ease-in-out infinite; }
 
-.spin-wrap { text-align:center; padding:.25rem 0 1.125rem; }
-.spinner { display:inline-block; width:24px; height:24px; border:2px solid var(--border); border-top-color:var(--primary); border-radius:50%; animation:spin .8s linear infinite; }
-.load-txt { font-size:11.5px; color:var(--muted); margin-top:.625rem; letter-spacing:.5px; }
+/* ── 로딩 ── */
+.spin-wrap { text-align: center; padding: .25rem 0 1.125rem; }
+.spinner {
+  display: inline-block; width: 24px; height: 24px;
+  border: 2px solid var(--border); border-top-color: var(--primary);
+  border-radius: 50%; animation: spin .8s linear infinite;
+}
+.load-txt { font-size: 11.5px; color: var(--muted); margin-top: .625rem; }
 
+/* ── 재생 버튼 ── */
 .play-btn {
-  width:58px; height:58px; border-radius:50%;
-  border:none; background:var(--pri-bg); color:var(--primary);
-  font-size:18px; cursor:pointer;
-  display:flex; align-items:center; justify-content:center;
-  margin:0 auto 1.375rem;
-  transition:transform .12s, box-shadow .2s, background .2s;
-  box-shadow:0 3px 14px rgba(49,130,246,.2);
+  width: 64px; height: 64px; border-radius: 50%;
+  border: none; background: var(--pri-bg); color: var(--primary);
+  font-size: 20px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  margin: 0 auto 1.25rem;
+  transition: transform .12s, box-shadow .2s, background .2s;
+  box-shadow: 0 2px 10px rgba(49,130,246,.2);
 }
-.play-btn:hover  { background:#D8EAFD; box-shadow:0 6px 22px rgba(49,130,246,.3); transform:scale(1.05); }
-.play-btn:active { transform:scale(.93); }
-.play-btn:disabled { opacity:.3; cursor:not-allowed; transform:none; box-shadow:none; }
+.play-btn:hover  { background: #D8EAFD; box-shadow: 0 6px 20px rgba(49,130,246,.3); transform: scale(1.05); }
+.play-btn:active { transform: scale(.93); }
+.play-btn:disabled { opacity: .3; cursor: not-allowed; transform: none; box-shadow: none; }
 
-.seek-wrap { display:none; }
+/* ── 시크바 ── */
+.seek-wrap { display: none; }
 .seek-bar {
-  -webkit-appearance:none; appearance:none;
-  width:100%; height:3px; border-radius:99px;
-  background:var(--border-l); outline:none; cursor:pointer;
+  -webkit-appearance: none; appearance: none;
+  width: 100%; height: 3px; border-radius: 99px;
+  background: var(--border-l); outline: none; cursor: pointer;
 }
 .seek-bar::-webkit-slider-thumb {
-  -webkit-appearance:none;
-  width:15px; height:15px; border-radius:50%;
-  background:var(--primary); border:2.5px solid var(--card);
-  box-shadow:0 1px 6px rgba(49,130,246,.45);
-  cursor:pointer; transition:transform .1s;
+  -webkit-appearance: none;
+  width: 16px; height: 16px; border-radius: 50%;
+  background: var(--primary); border: 2.5px solid var(--card);
+  box-shadow: 0 1px 6px rgba(49,130,246,.4);
+  cursor: pointer; transition: transform .1s;
 }
-.seek-bar::-webkit-slider-thumb:active { transform:scale(1.35); }
+.seek-bar::-webkit-slider-thumb:active { transform: scale(1.35); }
 .seek-bar::-moz-range-thumb {
-  width:15px; height:15px; border-radius:50%;
-  background:var(--primary); border:2.5px solid var(--card); cursor:pointer;
+  width: 16px; height: 16px; border-radius: 50%;
+  background: var(--primary); border: 2.5px solid var(--card); cursor: pointer;
 }
-.seek-time { font-size:11px; color:var(--muted); margin-top:9px; letter-spacing:.3px; font-variant-numeric:tabular-nums; }
-
-.hint { font-size:12px; color:var(--muted); min-height:18px; text-align:center; margin-top:.875rem; line-height:1.7; }
-.hint.err { color:#D94F4F; }
-
-/* ── 저장 카드 ── */
-.dl-section {
-  display:none;
-  background:var(--card);
-  border:1px solid var(--border-l);
-  border-radius:16px;
-  overflow:hidden;
-  margin-bottom:.625rem;
-  box-shadow:0 1px 3px var(--shadow2);
-  animation:slide .4s ease both;
+.seek-time {
+  font-size: 11px; color: var(--muted);
+  margin-top: 9px; font-variant-numeric: tabular-nums;
 }
-
-/* 안내 배너 */
-.dl-guide {
-  background:#EBF3FE;
-  padding:.75rem 1.125rem;
-  border-bottom:1px solid var(--border-l);
+.status {
+  text-align: center; font-size: 13px;
+  color: var(--muted); min-height: 20px;
+  margin-bottom: 1rem;
 }
-.dl-guide p {
-  font-size:12px; color:var(--sub);
-  line-height:1.9;
-}
-.dl-guide strong { color:var(--primary); }
+.status.err { color: #D94F4F; line-height: 1.8; }
 
-/* 버튼 영역 */
-.dl-body { padding:1rem 1.125rem; }
-.dl-row  { display:flex; align-items:center; justify-content:space-between; gap:12px; }
-.dl-info p     { font-size:13px; font-weight:500; color:var(--sub); margin-bottom:2px; }
-.dl-info small { font-size:11px; color:var(--muted); font-weight:300; }
-
-.dl-btn {
-  flex-shrink:0;
-  display:flex; align-items:center; gap:6px;
-  padding:10px 18px; border-radius:10px;
-  border:none; background:var(--primary); color:#fff;
-  font-size:13px; font-family:'Noto Sans KR',sans-serif; font-weight:500;
-  cursor:pointer; white-space:nowrap;
-  transition:background .15s, transform .1s, opacity .15s;
-  min-width:110px; justify-content:center;
+/* ── 저장 버튼 카드 ── */
+.save-row {
+  display: flex; align-items: center;
+  justify-content: space-between; gap: 12px;
 }
-.dl-btn:hover:not(:disabled) { background:var(--pri-lt); }
-.dl-btn:active { transform:scale(.95); }
-.dl-btn:disabled { opacity:.6; cursor:not-allowed; transform:none; }
-.dl-btn .btn-spin {
-  display:none; width:12px; height:12px;
-  border:2px solid rgba(255,255,255,.4); border-top-color:#fff;
-  border-radius:50%; animation:spin .7s linear infinite;
-  flex-shrink:0;
-}
-.dl-btn.converting .btn-spin { display:block; }
-.dl-btn.converting .btn-text { opacity:.7; }
+.save-info p     { font-size: 13px; font-weight: 500; color: var(--sub); margin-bottom: 3px; }
+.save-info small { font-size: 11px; color: var(--muted); font-weight: 300; line-height: 1.7; }
 
-/* 정책 */
+.save-btn {
+  flex-shrink: 0;
+  display: flex; align-items: center; gap: 6px;
+  padding: 11px 18px; border-radius: 10px;
+  border: none; background: var(--primary); color: #fff;
+  font-size: 13px; font-family: 'Noto Sans KR', sans-serif; font-weight: 500;
+  cursor: pointer; white-space: nowrap;
+  transition: background .15s, transform .1s;
+  min-width: 110px; justify-content: center;
+  box-shadow: 0 2px 8px rgba(49,130,246,.25);
+}
+.save-btn:hover:not(:disabled) { background: var(--pri-lt); }
+.save-btn:active { transform: scale(.96); }
+.save-btn:disabled { opacity: .6; cursor: not-allowed; }
+.save-btn .btn-spin {
+  display: none; width: 12px; height: 12px;
+  border: 2px solid rgba(255,255,255,.4); border-top-color: #fff;
+  border-radius: 50%; animation: spin .7s linear infinite;
+}
+.save-btn.converting .btn-spin { display: block; }
+
+/* ── 정책 안내 (포인트 컬러 강조) ── */
 .policy-note {
-  display:none; text-align:center;
-  font-size:11px; color:var(--faint);
-  letter-spacing:.15px; line-height:2;
-  margin-bottom:1.5rem;
-  animation:fadeIn .6s .2s ease both;
+  display: none;
+  background: var(--pri-bg);
+  border: 1.5px solid rgba(49,130,246,.25);
+  border-radius: 12px;
+  padding: .875rem 1.125rem;
+  margin-bottom: .75rem;
+  animation: fadeIn .5s ease both;
 }
-.policy-note strong { color:var(--muted); font-weight:500; }
+.policy-note p {
+  font-size: 12.5px;
+  color: var(--primary);
+  font-weight: 500;
+  line-height: 1.9;
+  text-align: center;
+}
+.policy-note p strong {
+  color: #1A6AE8;
+  font-weight: 700;
+}
 
-/* 완료 */
-.done-wrap { display:none; text-align:center; animation:fadeIn .7s ease both; }
-.done-icon { font-size:50px; display:block; margin-bottom:1.25rem; animation:bloom .65s cubic-bezier(.22,1,.36,1) both; }
-.done-title { font-family:'Noto Serif KR',serif; font-size:18px; font-weight:600; color:var(--text); margin-bottom:.5rem; }
-.done-msg { font-size:13px; color:var(--sub); line-height:2.2; margin-bottom:1.75rem; font-weight:300; }
-.done-divider { width:28px; height:1px; background:var(--faint); margin:0 auto 1.75rem; }
+/* ── 완료 화면 ── */
+.done-wrap { display: none; text-align: center; padding: 2rem 0; animation: fadeIn .6s ease both; }
+.done-icon { font-size: 54px; display: block; margin-bottom: 1.25rem; animation: bloom .6s cubic-bezier(.22,1,.36,1) both; }
+.done-title { font-size: 20px; font-weight: 700; color: var(--text); margin-bottom: .5rem; letter-spacing: -.3px; }
+.done-msg   { font-size: 14px; color: var(--muted); line-height: 2.1; font-weight: 300; }
+.done-divider { width: 32px; height: 1px; background: var(--border); margin: 1.5rem auto; }
 .replay-btn {
-  display:inline-flex; align-items:center; gap:9px;
-  padding:10px 28px; border-radius:10px;
-  border:none; background:var(--pri-bg); color:var(--primary);
-  font-size:13px; font-family:'Noto Sans KR',sans-serif; font-weight:500; cursor:pointer;
-  transition:background .2s, box-shadow .2s;
-  box-shadow:0 2px 10px rgba(49,130,246,.15);
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 13px 28px; border-radius: 10px;
+  border: none; background: var(--pri-bg); color: var(--primary);
+  font-size: 14px; font-family: 'Noto Sans KR', sans-serif; font-weight: 500; cursor: pointer;
+  transition: background .2s; box-shadow: 0 2px 10px rgba(49,130,246,.15);
 }
-.replay-btn:hover { background:#D8EAFD; }
+.replay-btn:hover { background: #D8EAFD; }
 
 footer {
-  text-align:center; font-size:11px; color:var(--faint);
-  letter-spacing:.6px; margin-top:2rem;
-  font-family:'Noto Serif KR',serif; font-style:italic; font-weight:300;
+  margin-top: 2.5rem; text-align: center;
+  font-size: 12px; color: var(--faint); letter-spacing: .3px; font-weight: 300;
 }
 </style>
 </head>
 <body>
 <div class="wrap">
 
-  <!-- 재생 화면 -->
+  <!-- ── 재생 화면 ── -->
   <div id="playerWrap">
-    <div class="hr">
-      <div class="hr-line"></div><div class="hr-dot"></div><div class="hr-line"></div>
+
+    <!-- 상단 헤더 (record.html 동일 구조) -->
+    <div class="top-header">
+      <div class="school-name" id="schoolName">잠시만요…</div>
+      <div class="student-info" id="studentInfo"></div>
+      <div class="page-desc">졸업 음성 메시지</div>
     </div>
 
-    <div class="identity">
-      <div class="cls-label" id="clsEl"></div>
-      <div class="name-label" id="nameEl">잠시만요…</div>
-    </div>
+    <!-- 플레이어 카드 -->
+    <div class="card">
+      <div class="card-title">음성 메시지</div>
 
-    <div class="player-card">
       <div class="waveform" id="wave">
-        <div class="bar" style="animation-delay:.00s"></div><div class="bar" style="animation-delay:.09s"></div>
-        <div class="bar" style="animation-delay:.18s"></div><div class="bar" style="animation-delay:.27s"></div>
-        <div class="bar" style="animation-delay:.36s"></div><div class="bar" style="animation-delay:.45s"></div>
+        <div class="bar" style="animation-delay:.00s"></div>
+        <div class="bar" style="animation-delay:.09s"></div>
+        <div class="bar" style="animation-delay:.18s"></div>
+        <div class="bar" style="animation-delay:.27s"></div>
+        <div class="bar" style="animation-delay:.36s"></div>
+        <div class="bar" style="animation-delay:.45s"></div>
         <div class="bar" style="animation-delay:.54s"></div>
-        <div class="bar" style="animation-delay:.45s"></div><div class="bar" style="animation-delay:.36s"></div>
-        <div class="bar" style="animation-delay:.27s"></div><div class="bar" style="animation-delay:.18s"></div>
-        <div class="bar" style="animation-delay:.09s"></div><div class="bar" style="animation-delay:.00s"></div>
+        <div class="bar" style="animation-delay:.45s"></div>
+        <div class="bar" style="animation-delay:.36s"></div>
+        <div class="bar" style="animation-delay:.27s"></div>
+        <div class="bar" style="animation-delay:.18s"></div>
+        <div class="bar" style="animation-delay:.09s"></div>
+        <div class="bar" style="animation-delay:.00s"></div>
       </div>
 
       <div class="spin-wrap" id="spinWrap">
@@ -240,54 +254,48 @@ footer {
         <input class="seek-bar" id="seekBar" type="range" min="0" max="100" value="0" step="0.1">
         <div class="seek-time"><span id="timeCurrent">0:00</span></div>
       </div>
-      <div class="hint" id="hintMsg"></div>
+
+      <div class="status" id="statusMsg"></div>
     </div>
 
-    <!-- ★ 저장 카드 -->
-    <div class="dl-section" id="dlSection">
-      <!-- 안내 배너 -->
-      <div class="dl-guide">
-        <p>
-          <strong>MP3</strong>로 변환 후 저장돼요.<br>
-          아이폰: 공유 시트 → <strong>카카오톡</strong> 또는 <strong>파일에 저장</strong><br>
-          안드로이드 / PC: 자동 다운로드
-        </p>
-      </div>
-      <!-- 버튼 -->
-      <div class="dl-body">
-        <div class="dl-row">
-          <div class="dl-info">
-            <p>내 기기에 저장하기</p>
-            <small>Google Drive·카카오톡·파일 앱에서 재생 가능</small>
-          </div>
-          <button class="dl-btn" id="dlBtn" onclick="downloadMp3()">
-            <span class="btn-spin"></span>
-            <span class="btn-text">⬇ MP3 저장</span>
-          </button>
+    <!-- 저장 카드 -->
+    <div class="card" id="saveCard" style="display:none">
+      <div class="card-title">내 기기에 저장하기</div>
+      <div class="save-row">
+        <div class="save-info">
+          <p>MP3 파일로 저장</p>
+          <small>
+            아이폰: 공유 시트 → 카카오톡 또는 파일에 저장<br>
+            안드로이드 · PC: 자동 다운로드
+          </small>
         </div>
+        <button class="save-btn" id="saveBtn" onclick="downloadMp3()">
+          <span class="btn-spin"></span>
+          <span class="btn-text">⬇ MP3 저장</span>
+        </button>
       </div>
     </div>
 
-    <!-- 정책 -->
+    <!-- ★ 정책 안내 — 포인트 컬러 강조 -->
     <div class="policy-note" id="policyNote">
-      ※ 음성 파일은 제공일로부터 <strong>1년간</strong> 보관됩니다.<br>
-      소중한 목소리는 위 버튼으로 직접 저장해 두세요.
+      <p>
+        ⚠️ 음성 파일은 제공일로부터 <strong>1년 후 삭제</strong>됩니다.<br>
+        위 버튼으로 지금 바로 저장해 두세요!
+      </p>
     </div>
 
     <footer>소중한 순간은 늘 여기에 · 늘스튜디오</footer>
   </div>
 
-  <!-- 완료 화면 -->
+  <!-- ── 완료 화면 ── -->
   <div class="done-wrap" id="doneWrap">
-    <div class="hr" style="margin-bottom:1.75rem">
-      <div class="hr-line"></div><div class="hr-dot"></div><div class="hr-line"></div>
-    </div>
     <span class="done-icon">🎓</span>
     <div class="done-title" id="doneTitle"></div>
-    <div class="done-msg"   id="doneMsg"></div>
+    <div class="done-divider"></div>
+    <div class="done-msg" id="doneMsg"></div>
     <div class="done-divider"></div>
     <button class="replay-btn" onclick="replayAudio()">▶&nbsp;&nbsp;다시 듣기</button>
-    <footer style="margin-top:2.25rem">소중한 순간은 늘 여기에 · 늘스튜디오</footer>
+    <footer style="margin-top:2.5rem">소중한 순간은 늘 여기에 · 늘스튜디오</footer>
   </div>
 
 </div>
@@ -299,13 +307,14 @@ footer {
   const fileId  = p.get('f') || '';
   const urlName = decodeURIComponent(p.get('n') || '');
   const urlCls  = decodeURIComponent(p.get('c') || '');
+  const urlSchool = decodeURIComponent(p.get('s') || '');  // ★ 학교 파라미터
 
-  const nameEl      = document.getElementById('nameEl');
-  const clsEl       = document.getElementById('clsEl');
+  const schoolName  = document.getElementById('schoolName');
+  const studentInfo = document.getElementById('studentInfo');
   const player      = document.getElementById('player');
   const wave        = document.getElementById('wave');
   const playBtn     = document.getElementById('playBtn');
-  const hintMsg     = document.getElementById('hintMsg');
+  const statusMsg   = document.getElementById('statusMsg');
   const spinWrap    = document.getElementById('spinWrap');
   const seekWrap    = document.getElementById('seekWrap');
   const seekBar     = document.getElementById('seekBar');
@@ -314,22 +323,25 @@ footer {
   const doneWrap    = document.getElementById('doneWrap');
   const doneTitle   = document.getElementById('doneTitle');
   const doneMsg     = document.getElementById('doneMsg');
-  const dlSection   = document.getElementById('dlSection');
-  const dlBtn       = document.getElementById('dlBtn');
+  const saveCard    = document.getElementById('saveCard');
+  const saveBtn     = document.getElementById('saveBtn');
   const policyNote  = document.getElementById('policyNote');
 
-  let verifiedName = urlName;
-  let verifiedCls  = urlCls;
-  let rawBlob      = null;   // 원본 blob (WebM/OGG/MP4)
-  let audioMime    = 'audio/webm';
+  let verifiedName   = urlName;
+  let verifiedCls    = urlCls;
+  let verifiedSchool = urlSchool;
+  let rawBlob        = null;
+  let audioMime      = 'audio/webm';
+
+  // 초기 표시
+  schoolName.textContent  = urlSchool || '졸업앨범';
+  studentInfo.textContent = [urlCls, urlName].filter(Boolean).join(' · ');
 
   if (!fileId) {
     spinWrap.style.display = 'none';
-    nameEl.textContent = '잘못된 QR코드입니다';
-    clsEl.textContent  = '올바른 QR코드를 스캔해 주세요';
+    schoolName.textContent  = '잘못된 QR코드';
+    studentInfo.textContent = '올바른 QR코드를 스캔해 주세요';
   } else {
-    nameEl.textContent = (urlName || '학생') + '의 졸업 메시지';
-    clsEl.textContent  = urlCls;
     loadAudio();
   }
 
@@ -339,8 +351,13 @@ footer {
       const data = await res.json();
       if (!data.ok) throw new Error(data.error || '파일 로드 실패');
 
-      if (data.name)      { verifiedName = data.name;      nameEl.textContent = data.name + '의 졸업 메시지'; }
-      if (data.className) { verifiedCls  = data.className; clsEl.textContent  = data.className; }
+      // ★ 서버 값으로 덮어쓰기 (보안 + 학교명 표시)
+      if (data.name)      verifiedName   = data.name;
+      if (data.className) verifiedCls    = data.className;
+      if (data.school)    verifiedSchool = data.school;
+
+      schoolName.textContent  = verifiedSchool || '졸업앨범';
+      studentInfo.textContent = [verifiedCls, verifiedName].filter(Boolean).join(' · ');
 
       audioMime = data.mime || 'audio/webm';
       const binary = atob(data.b64);
@@ -351,8 +368,8 @@ footer {
       player.load();
     } catch {
       spinWrap.style.display = 'none';
-      hintMsg.className = 'hint err';
-      hintMsg.innerHTML = '음성을 불러올 수 없습니다.<br>잠시 후 다시 시도해 주세요.';
+      statusMsg.className = 'status err';
+      statusMsg.innerHTML = '음성을 불러올 수 없습니다.<br>잠시 후 다시 시도해 주세요.';
     }
   }
 
@@ -366,12 +383,12 @@ footer {
   }
 
   player.addEventListener('canplay', () => {
-    spinWrap.style.display   = 'none';
-    seekWrap.style.display   = 'block';
-    dlSection.style.display  = 'block';
+    spinWrap.style.display  = 'none';
+    seekWrap.style.display  = 'block';
+    saveCard.style.display  = 'block';
     policyNote.style.display = 'block';
-    playBtn.disabled         = false;
-    hintMsg.textContent      = '버튼을 눌러 음성을 들어보세요';
+    playBtn.disabled        = false;
+    statusMsg.textContent   = '버튼을 눌러 음성을 들어보세요';
     updateSeekColor(0);
     player.play().catch(() => {});
   }, { once: true });
@@ -387,9 +404,8 @@ footer {
   seekBar.addEventListener('mousedown',  () => { isSeeking = true; });
   seekBar.addEventListener('touchstart', () => { isSeeking = true; }, { passive: true });
   seekBar.addEventListener('input', () => {
-    const pct = parseFloat(seekBar.value);
-    timeCurrent.textContent = fmt((pct/100) * player.duration);
-    updateSeekColor(pct);
+    updateSeekColor(parseFloat(seekBar.value));
+    timeCurrent.textContent = fmt((parseFloat(seekBar.value)/100) * player.duration);
   });
   seekBar.addEventListener('change', () => {
     player.currentTime = (seekBar.value / 100) * player.duration;
@@ -398,14 +414,13 @@ footer {
 
   player.addEventListener('error', () => {
     spinWrap.style.display = 'none';
-    hintMsg.className = 'hint err';
-    hintMsg.textContent = '음성 재생 중 오류가 발생했습니다.';
+    statusMsg.className = 'status err';
+    statusMsg.textContent = '음성 재생 중 오류가 발생했습니다.';
     playBtn.disabled = true;
   });
 
   player.addEventListener('ended', () => {
-    wave.className = 'waveform';
-    playBtn.textContent = '▶';
+    wave.className = 'waveform'; playBtn.textContent = '▶';
     updateSeekColor(100);
     setTimeout(() => {
       playerWrap.style.display = 'none';
@@ -419,36 +434,23 @@ footer {
     if (player.paused) player.play(); else player.pause();
   }
   function replayAudio() {
-    doneWrap.style.display   = 'none';
-    playerWrap.style.display = 'block';
+    doneWrap.style.display = 'none'; playerWrap.style.display = 'block';
     seekBar.value = 0; updateSeekColor(0);
     timeCurrent.textContent = '0:00';
     player.currentTime = 0; player.play();
   }
+  player.addEventListener('play',  () => { wave.className='waveform playing'; playBtn.textContent='■'; statusMsg.textContent='재생 중…'; });
+  player.addEventListener('pause', () => { wave.className='waveform';         playBtn.textContent='▶'; statusMsg.textContent=''; });
 
-  player.addEventListener('play',  () => { wave.className='waveform playing'; playBtn.textContent='■'; });
-  player.addEventListener('pause', () => { wave.className='waveform';         playBtn.textContent='▶'; });
-
-  // ──────────────────────────────────────────
-  //  ★ MP3 변환 → 공유/다운로드
-  //  1) AudioContext로 PCM 디코딩
-  //  2) lamejs로 MP3 인코딩
-  //  3) Web Share API (iOS → 카카오톡 or 파일에 저장)
-  //     or anchor download (Android / PC)
-  // ──────────────────────────────────────────
+  /* ── MP3 변환 → 공유/다운로드 ── */
   async function downloadMp3() {
     if (!rawBlob) return;
-
-    // 버튼 로딩 상태
-    dlBtn.disabled = true;
-    dlBtn.classList.add('converting');
-    dlBtn.querySelector('.btn-text').textContent = 'MP3 변환 중…';
-
+    saveBtn.disabled = true;
+    saveBtn.classList.add('converting');
+    saveBtn.querySelector('.btn-text').textContent = '변환 중…';
     try {
       const mp3Blob = await convertToMp3(rawBlob);
       const filename = (verifiedName || '학생') + '_졸업메시지.mp3';
-
-      // iOS: Web Share API → 카카오톡 / 파일에 저장
       try {
         if (navigator.canShare) {
           const file = new File([mp3Blob], filename, { type: 'audio/mpeg' });
@@ -457,74 +459,49 @@ footer {
             return;
           }
         }
-      } catch (e) { /* 공유 취소 또는 미지원 → 일반 다운로드 */ }
-
-      // Android / PC: 바로 다운로드
+      } catch (e) { /* 공유 취소 → 일반 다운로드 */ }
       const url = URL.createObjectURL(mp3Blob);
-      const a   = document.createElement('a');
+      const a = document.createElement('a');
       a.href = url; a.download = filename;
       document.body.appendChild(a); a.click(); document.body.removeChild(a);
       setTimeout(() => URL.revokeObjectURL(url), 10000);
-
     } catch (err) {
       alert('변환 중 오류가 발생했습니다.\n' + err.message);
     } finally {
-      dlBtn.disabled = false;
-      dlBtn.classList.remove('converting');
-      dlBtn.querySelector('.btn-text').textContent = '⬇ MP3 저장';
+      saveBtn.disabled = false;
+      saveBtn.classList.remove('converting');
+      saveBtn.querySelector('.btn-text').textContent = '⬇ MP3 저장';
     }
   }
 
-  // lamejs를 사용한 MP3 변환
   async function convertToMp3(blob) {
-    // 1. ArrayBuffer 읽기
     const arrayBuffer = await blob.arrayBuffer();
-
-    // 2. AudioContext로 PCM 디코딩
-    const AudioCtx = window.AudioContext || window.webkitAudioContext;
-    const ctx = new AudioCtx();
+    const AudioCtx    = window.AudioContext || window.webkitAudioContext;
+    const ctx         = new AudioCtx();
     const audioBuffer = await ctx.decodeAudioData(arrayBuffer);
     ctx.close();
-
-    const channels   = Math.min(audioBuffer.numberOfChannels, 2); // 최대 스테레오
+    const channels   = Math.min(audioBuffer.numberOfChannels, 2);
     const sampleRate = audioBuffer.sampleRate;
-    const numFrames  = audioBuffer.length;
-
-    // 3. lamejs MP3 인코더 초기화 (모노 or 스테레오, 128kbps)
-    const encoder = new lamejs.Mp3Encoder(channels, sampleRate, 128);
-
-    // Float32 → Int16 변환 헬퍼
-    const toInt16 = (f32) => {
+    const encoder    = new lamejs.Mp3Encoder(channels, sampleRate, 128);
+    const toI16 = f32 => {
       const i16 = new Int16Array(f32.length);
-      for (let i = 0; i < f32.length; i++) {
+      for (let i = 0; i < f32.length; i++)
         i16[i] = Math.max(-32768, Math.min(32767, Math.round(f32[i] * 32767)));
-      }
       return i16;
     };
-
-    const leftF32  = audioBuffer.getChannelData(0);
-    const rightF32 = channels > 1 ? audioBuffer.getChannelData(1) : leftF32;
-    const leftI16  = toInt16(leftF32);
-    const rightI16 = toInt16(rightF32);
-
-    // 4. 블록 단위 인코딩
-    const mp3Parts = [];
-    const BLOCK    = 1152; // lamejs 권장 블록 크기
-
-    for (let i = 0; i < numFrames; i += BLOCK) {
-      const lChunk = leftI16.subarray(i, i + BLOCK);
-      const rChunk = rightI16.subarray(i, i + BLOCK);
+    const lI16 = toI16(audioBuffer.getChannelData(0));
+    const rI16 = channels > 1 ? toI16(audioBuffer.getChannelData(1)) : lI16;
+    const parts = [];
+    const BLOCK = 1152;
+    for (let i = 0; i < lI16.length; i += BLOCK) {
       const buf = channels > 1
-        ? encoder.encodeBuffer(lChunk, rChunk)
-        : encoder.encodeBuffer(lChunk);
-      if (buf.length > 0) mp3Parts.push(new Uint8Array(buf));
+        ? encoder.encodeBuffer(lI16.subarray(i, i+BLOCK), rI16.subarray(i, i+BLOCK))
+        : encoder.encodeBuffer(lI16.subarray(i, i+BLOCK));
+      if (buf.length > 0) parts.push(new Uint8Array(buf));
     }
-
-    // 5. 플러시
     const flush = encoder.flush();
-    if (flush.length > 0) mp3Parts.push(new Uint8Array(flush));
-
-    return new Blob(mp3Parts, { type: 'audio/mpeg' });
+    if (flush.length > 0) parts.push(new Uint8Array(flush));
+    return new Blob(parts, { type: 'audio/mpeg' });
   }
 </script>
 </body>

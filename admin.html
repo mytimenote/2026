@@ -176,7 +176,8 @@ footer{margin-top:3rem;font-size:11px;color:var(--faint);letter-spacing:2px;text
     return getPagesUrl() + '/play.html'
       + '?f=' + encodeURIComponent(s.fileId)
       + '&n=' + encodeURIComponent(s.name)
-      + '&c=' + encodeURIComponent(s.className);
+      + '&c=' + encodeURIComponent(s.className)
+      + '&s=' + encodeURIComponent(s.school);  // ★ 학교명 추가
   }
 
   function renderGrid(school) {
