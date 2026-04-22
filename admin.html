@@ -173,11 +173,9 @@ footer{margin-top:3rem;font-size:11px;color:var(--faint);letter-spacing:2px;text
 
   // QR URL: fileId + 이름 + 학반 직접 포함 → play.html이 GAS 없이 바로 재생
   function makeUrl(s) {
-    return getPagesUrl() + '/play.html'
-      + '?f=' + encodeURIComponent(s.fileId)
-      + '&n=' + encodeURIComponent(s.name)
-      + '&c=' + encodeURIComponent(s.className)
-      + '&s=' + encodeURIComponent(s.school);  // ★ 학교명 추가
+    // fileId 하나만 포함 → URL 최소화 → QR 단순화
+    // 이름/반/학교는 play.html이 서버(GAS)에서 직접 조회
+    return getPagesUrl() + '/play.html?f=' + encodeURIComponent(s.fileId);
   }
 
   function renderGrid(school) {
