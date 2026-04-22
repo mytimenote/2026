@@ -10,39 +10,31 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
-  --cream:   #f6f1e8;
-  --warm:    #eee6d3;
-  --card:    #fdfaf4;
-  --gold:    #7d5c2f;
-  --gold-lt: #a87d48;
-  --gold-pl: #c9a870;
-  --gold-hi: #dfc28e;
-  --border:  #ddd0b0;
-  --border-l:#ece1c8;
-  --text:    #1e1a14;
-  --sub:     #4e3d28;
-  --muted:   #7d6a52;
-  --faint:   #b8a282;
-  --shadow:  rgba(90,65,30,.11);
-  --shadow2: rgba(90,65,30,.06);
+  --cream:   #F7F8FA;
+  --warm:    #EEF4FF;
+  --card:    #FFFFFF;
+  --primary: #3182F6;
+  --pri-lt:  #5B9DF8;
+  --pri-bg:  #EBF3FE;
+  --border:  #E5E8EB;
+  --border-l:#EEF1F5;
+  --text:    #191919;
+  --sub:     #4E4E4E;
+  --muted:   #8B95A1;
+  --faint:   #C6CAD0;
+  --shadow:  rgba(0,0,0,.07);
+  --shadow2: rgba(0,0,0,.04);
 }
 
 body {
   min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
   background: var(--cream);
-  background-image:
-    radial-gradient(ellipse 80% 55% at 10% 5%,  rgba(210,175,120,.18) 0%, transparent 100%),
-    radial-gradient(ellipse 60% 40% at 90% 95%, rgba(125,92,47,.10)  0%, transparent 100%);
   font-family: 'Noto Sans KR', sans-serif;
   color: var(--text);
   padding: 2.5rem 1.25rem;
 }
 
-/* ── 애니메이션 ── */
 @keyframes rise   { from { opacity:0; transform:translateY(22px) } to { opacity:1; transform:none } }
 @keyframes fadeIn { from { opacity:0 } to { opacity:1 } }
 @keyframes spin   { to   { transform:rotate(360deg) } }
@@ -50,324 +42,163 @@ body {
 @keyframes bloom  { 0%{ transform:scale(.75); opacity:0 } 60%{ transform:scale(1.09) } 100%{ transform:scale(1); opacity:1 } }
 @keyframes slide  { from{ opacity:0; transform:translateY(8px) } to{ opacity:1; transform:none } }
 
-/* ── 레이아웃 ── */
 .wrap {
-  width: 100%;
-  max-width: 340px;
+  width: 100%; max-width: 340px;
   animation: rise .65s cubic-bezier(.22,1,.36,1) both;
 }
 
-/* ── 상단 장식선 ── */
-.hr {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 2.25rem;
-}
-.hr-line {
-  flex: 1;
-  height: 1px;
-  background: linear-gradient(to right, transparent, var(--gold-pl));
-}
-.hr-line:last-child {
-  background: linear-gradient(to left, transparent, var(--gold-pl));
-}
-.hr-mark {
-  font-size: 11px;
-  color: var(--gold-pl);
-  font-family: 'Noto Serif KR', serif;
-  opacity: .8;
-  letter-spacing: 3px;
-}
+/* 구분선 */
+.hr { display:flex; align-items:center; gap:10px; margin-bottom:2.25rem; }
+.hr-line { flex:1; height:1px; background:linear-gradient(to right,transparent,var(--border)); }
+.hr-line:last-child { background:linear-gradient(to left,transparent,var(--border)); }
+.hr-dot { width:5px; height:5px; border-radius:50%; background:var(--pri-lt); opacity:.7; }
 
-/* ── 이름/반 영역 ── */
-.identity {
-  text-align: center;
-  margin-bottom: 1.75rem;
-  padding: 0 .5rem;
-}
-.cls-label {           /* ★ 학반 폰트 크기 상향 */
-  font-size: 15px;
-  font-weight: 400;
-  color: var(--gold-lt);
-  letter-spacing: 1.2px;
-  margin-bottom: .5rem;
-  line-height: 1.6;
+/* 이름/반 */
+.identity { text-align:center; margin-bottom:1.75rem; padding:0 .5rem; }
+.cls-label {
+  font-size: 15px; font-weight:400;
+  color: var(--primary);
+  letter-spacing:.8px; margin-bottom:.5rem; line-height:1.6;
 }
 .name-label {
   font-family: 'Noto Serif KR', serif;
-  font-size: 22px;
-  font-weight: 600;
-  color: var(--text);
-  letter-spacing: -.3px;
-  line-height: 1.45;
+  font-size:22px; font-weight:600;
+  color:var(--text); letter-spacing:-.3px; line-height:1.45;
 }
 
-/* ── 플레이어 카드 ── */
+/* 플레이어 카드 */
 .player-card {
   background: var(--card);
   border: 1px solid var(--border-l);
-  border-radius: 22px;
+  border-radius: 20px;
   padding: 1.875rem 1.5rem 1.5rem;
-  box-shadow:
-    0 2px 0 rgba(255,255,255,.9) inset,
-    0 6px 28px var(--shadow),
-    0 1px 4px var(--shadow2);
+  box-shadow: 0 4px 24px var(--shadow), 0 1px 4px var(--shadow2);
   margin-bottom: 1rem;
 }
 
-/* ── 파형 ── */
-.waveform {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  height: 44px;
-  margin-bottom: 1.625rem;
-}
-.bar {
-  width: 3px;
-  border-radius: 99px;
-  background: var(--gold-pl);
-  height: 3px;
-  opacity: .2;
-}
-.waveform.playing .bar {
-  animation: wave 1.35s ease-in-out infinite;
-}
+/* 파형 */
+.waveform { display:flex; align-items:center; justify-content:center; gap:4px; height:44px; margin-bottom:1.625rem; }
+.bar { width:3px; border-radius:99px; background:var(--pri-lt); height:3px; opacity:.2; }
+.waveform.playing .bar { animation:wave 1.35s ease-in-out infinite; }
 
-/* ── 로딩 ── */
-.spin-wrap {
-  text-align: center;
-  padding: .25rem 0 1.125rem;
-}
-.spinner {
-  display: inline-block;
-  width: 24px; height: 24px;
-  border: 2px solid var(--border);
-  border-top-color: var(--gold-lt);
-  border-radius: 50%;
-  animation: spin .8s linear infinite;
-}
-.load-txt {
-  font-size: 11.5px;
-  color: var(--muted);
-  margin-top: .625rem;
-  letter-spacing: .5px;
-}
+/* 로딩 */
+.spin-wrap { text-align:center; padding:.25rem 0 1.125rem; }
+.spinner { display:inline-block; width:24px; height:24px; border:2px solid var(--border); border-top-color:var(--primary); border-radius:50%; animation:spin .8s linear infinite; }
+.load-txt { font-size:11.5px; color:var(--muted); margin-top:.625rem; letter-spacing:.5px; }
 
-/* ── 재생 버튼 ── */
+/* 재생 버튼 */
 .play-btn {
-  width: 58px; height: 58px;
-  border-radius: 50%;
-  border: 1.5px solid var(--border);
-  background: var(--cream);
-  color: var(--gold);
-  font-size: 17px;
-  cursor: pointer;
-  display: flex; align-items: center; justify-content: center;
-  margin: 0 auto 1.375rem;
-  transition: border-color .2s, transform .12s, box-shadow .2s, background .2s;
-  box-shadow:
-    0 1px 0 rgba(255,255,255,.8) inset,
-    0 3px 14px var(--shadow);
+  width:58px; height:58px; border-radius:50%;
+  border:none; background:var(--pri-bg); color:var(--primary);
+  font-size:18px; cursor:pointer;
+  display:flex; align-items:center; justify-content:center;
+  margin:0 auto 1.375rem;
+  transition:transform .12s, box-shadow .2s, background .2s;
+  box-shadow:0 3px 14px rgba(49,130,246,.2);
 }
-.play-btn:hover  {
-  border-color: var(--gold-lt);
-  background: var(--warm);
-  box-shadow: 0 6px 22px var(--shadow);
-  transform: scale(1.05);
-}
-.play-btn:active  { transform: scale(.93); }
-.play-btn:disabled {
-  opacity: .28;
-  cursor: not-allowed;
-  transform: none;
-  box-shadow: none;
-}
+.play-btn:hover  { background:#D8EAFD; box-shadow:0 6px 22px rgba(49,130,246,.3); transform:scale(1.05); }
+.play-btn:active { transform:scale(.93); }
+.play-btn:disabled { opacity:.3; cursor:not-allowed; transform:none; box-shadow:none; }
 
-/* ── 시크바 ── */
-.seek-wrap { display: none; }
+/* 시크바 */
+.seek-wrap { display:none; }
 .seek-bar {
-  -webkit-appearance: none; appearance: none;
-  width: 100%; height: 3px; border-radius: 99px;
-  background: var(--border-l);
-  outline: none; cursor: pointer;
+  -webkit-appearance:none; appearance:none;
+  width:100%; height:3px; border-radius:99px;
+  background:var(--border-l); outline:none; cursor:pointer;
 }
 .seek-bar::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  width: 15px; height: 15px; border-radius: 50%;
-  background: var(--gold);
-  border: 2.5px solid var(--card);
-  box-shadow: 0 1px 6px rgba(125,92,47,.45);
-  cursor: pointer; transition: transform .1s;
+  -webkit-appearance:none;
+  width:15px; height:15px; border-radius:50%;
+  background:var(--primary); border:2.5px solid var(--card);
+  box-shadow:0 1px 6px rgba(49,130,246,.45);
+  cursor:pointer; transition:transform .1s;
 }
-.seek-bar::-webkit-slider-thumb:active { transform: scale(1.35); }
+.seek-bar::-webkit-slider-thumb:active { transform:scale(1.35); }
 .seek-bar::-moz-range-thumb {
-  width: 15px; height: 15px; border-radius: 50%;
-  background: var(--gold);
-  border: 2.5px solid var(--card);
-  box-shadow: 0 1px 6px rgba(125,92,47,.45);
-  cursor: pointer;
+  width:15px; height:15px; border-radius:50%;
+  background:var(--primary); border:2.5px solid var(--card);
+  cursor:pointer;
 }
-.seek-time {
-  font-size: 11px;
-  color: var(--muted);
-  margin-top: 9px;
-  letter-spacing: .3px;
-  font-variant-numeric: tabular-nums;
-}
+.seek-time { font-size:11px; color:var(--muted); margin-top:9px; letter-spacing:.3px; font-variant-numeric:tabular-nums; }
 
-/* ── 힌트 ── */
-.hint {
-  font-size: 12px;
-  color: var(--muted);
-  letter-spacing: .3px;
-  min-height: 18px;
-  text-align: center;
-  margin-top: .875rem;
-  line-height: 1.7;
-}
-.hint.err { color: #9e3d3d; font-size: 12px; line-height: 2; }
+.hint { font-size:12px; color:var(--muted); letter-spacing:.3px; min-height:18px; text-align:center; margin-top:.875rem; line-height:1.7; }
+.hint.err { color:#D94F4F; }
 
-/* ── 다운로드 섹션 ── */
+/* 다운로드 섹션 */
 .dl-section {
-  display: none;
-  background: var(--warm);
-  border: 1px solid var(--border-l);
-  border-radius: 14px;
-  padding: 1rem 1.125rem;
-  margin-bottom: .75rem;
-  animation: slide .4s ease both;
+  display:none;
+  background:var(--card);
+  border:1px solid var(--border-l);
+  border-radius:14px;
+  padding:1rem 1.125rem;
+  margin-bottom:.625rem;
+  box-shadow:0 1px 3px var(--shadow2);
+  animation:slide .4s ease both;
 }
-.dl-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-.dl-info p {
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--sub);
-  line-height: 1.5;
-  margin-bottom: 2px;
-}
-.dl-info small {
-  font-size: 11px;
-  color: var(--muted);
-  font-weight: 300;
-}
+.dl-row { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+.dl-info p   { font-size:13px; font-weight:500; color:var(--sub); line-height:1.5; margin-bottom:2px; }
+.dl-info small { font-size:11px; color:var(--muted); font-weight:300; }
 .dl-btn {
-  flex-shrink: 0;
-  padding: 9px 16px;
-  border-radius: 10px;
-  border: 1.5px solid var(--gold-pl);
-  background: var(--card);
-  color: var(--gold);
-  font-size: 12px;
-  font-family: 'Noto Sans KR', sans-serif;
-  font-weight: 500;
-  cursor: pointer;
-  white-space: nowrap;
-  transition: background .15s, border-color .15s, box-shadow .15s;
-  box-shadow: 0 2px 8px var(--shadow2);
+  flex-shrink:0; padding:9px 16px; border-radius:10px;
+  border:none; background:var(--primary); color:#fff;
+  font-size:12px; font-family:'Noto Sans KR',sans-serif; font-weight:500;
+  cursor:pointer; white-space:nowrap;
+  transition:background .15s, transform .1s;
 }
-.dl-btn:hover {
-  background: var(--warm);
-  border-color: var(--gold-lt);
-  box-shadow: 0 3px 14px var(--shadow);
-}
-.dl-btn:active { transform: scale(.95); }
+.dl-btn:hover  { background:var(--pri-lt); }
+.dl-btn:active { transform:scale(.95); }
 
-/* ── 정책 안내 ── */
+/* ★ 저장 안내 (Google Drive 경고 포함) */
+.save-note {
+  display:none;
+  background:#FFFBEB;
+  border:1px solid #FDE68A;
+  border-radius:10px;
+  padding:.75rem 1rem;
+  margin-bottom:.75rem;
+  animation:fadeIn .5s .1s ease both;
+}
+.save-note p { font-size:11.5px; color:#92400E; line-height:1.9; }
+.save-note strong { color:#78350F; }
+
+/* 정책 안내 */
 .policy-note {
-  display: none;
-  text-align: center;
-  font-size: 11px;
-  color: var(--faint);
-  letter-spacing: .15px;
-  line-height: 2;
-  margin-bottom: 1.5rem;
-  animation: fadeIn .6s .2s ease both;
+  display:none; text-align:center;
+  font-size:11px; color:var(--faint);
+  letter-spacing:.15px; line-height:2;
+  margin-bottom:1.5rem;
+  animation:fadeIn .6s .2s ease both;
 }
-.policy-note strong { color: var(--muted); font-weight: 500; }
+.policy-note strong { color:var(--muted); font-weight:500; }
 
-/* ── 완료 화면 ── */
-.done-wrap {
-  display: none;
-  text-align: center;
-  animation: fadeIn .7s ease both;
-}
-.done-icon {
-  font-size: 50px;
-  display: block;
-  margin-bottom: 1.25rem;
-  animation: bloom .65s cubic-bezier(.22,1,.36,1) both;
-}
-.done-title {
-  font-family: 'Noto Serif KR', serif;
-  font-size: 18px;
-  font-weight: 600;
-  color: var(--text);
-  margin-bottom: .5rem;
-}
-.done-msg {
-  font-size: 13px;
-  color: var(--sub);
-  line-height: 2.2;
-  margin-bottom: 1.75rem;
-  font-weight: 300;
-}
-.done-divider {
-  width: 28px; height: 1px;
-  background: var(--faint);
-  margin: 0 auto 1.75rem;
-}
+/* 완료 */
+.done-wrap { display:none; text-align:center; animation:fadeIn .7s ease both; }
+.done-icon { font-size:50px; display:block; margin-bottom:1.25rem; animation:bloom .65s cubic-bezier(.22,1,.36,1) both; }
+.done-title { font-family:'Noto Serif KR',serif; font-size:18px; font-weight:600; color:var(--text); margin-bottom:.5rem; }
+.done-msg { font-size:13px; color:var(--sub); line-height:2.2; margin-bottom:1.75rem; font-weight:300; }
+.done-divider { width:28px; height:1px; background:var(--faint); margin:0 auto 1.75rem; }
 .replay-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 9px;
-  padding: 10px 28px;
-  border-radius: 99px;
-  border: 1.5px solid var(--border);
-  background: var(--card);
-  color: var(--sub);
-  font-size: 13px;
-  font-family: 'Noto Sans KR', sans-serif;
-  font-weight: 500;
-  cursor: pointer;
-  transition: border-color .2s, color .2s, box-shadow .2s;
-  box-shadow: 0 2px 10px var(--shadow2);
+  display:inline-flex; align-items:center; gap:9px;
+  padding:10px 28px; border-radius:10px;
+  border:none; background:var(--pri-bg); color:var(--primary);
+  font-size:13px; font-family:'Noto Sans KR',sans-serif; font-weight:500; cursor:pointer;
+  transition:background .2s, box-shadow .2s;
+  box-shadow:0 2px 10px rgba(49,130,246,.15);
 }
-.replay-btn:hover {
-  border-color: var(--gold-lt);
-  color: var(--gold);
-  box-shadow: 0 5px 18px var(--shadow);
-}
-.replay-btn:active { transform: scale(.96); }
+.replay-btn:hover { background:#D8EAFD; box-shadow:0 5px 18px rgba(49,130,246,.22); }
 
-/* ── 푸터 ── */
-footer {
-  text-align: center;
-  font-size: 11px;
-  color: var(--faint);
-  letter-spacing: .6px;
-  margin-top: 2rem;
-  font-family: 'Noto Serif KR', serif;
-  font-style: italic;
-  font-weight: 300;
-}
+footer { text-align:center; font-size:11px; color:var(--faint); letter-spacing:.6px; margin-top:2rem; font-family:'Noto Serif KR',serif; font-style:italic; font-weight:300; }
 </style>
 </head>
 <body>
 <div class="wrap">
 
-  <!-- ── 재생 화면 ── -->
+  <!-- 재생 화면 -->
   <div id="playerWrap">
     <div class="hr">
       <div class="hr-line"></div>
-      <div class="hr-mark">✦</div>
+      <div class="hr-dot"></div>
       <div class="hr-line"></div>
     </div>
 
@@ -377,34 +208,24 @@ footer {
     </div>
 
     <div class="player-card">
-      <!-- 파형 -->
       <div class="waveform" id="wave">
-        <div class="bar" style="animation-delay:.00s"></div>
-        <div class="bar" style="animation-delay:.09s"></div>
-        <div class="bar" style="animation-delay:.18s"></div>
-        <div class="bar" style="animation-delay:.27s"></div>
-        <div class="bar" style="animation-delay:.36s"></div>
-        <div class="bar" style="animation-delay:.45s"></div>
+        <div class="bar" style="animation-delay:.00s"></div><div class="bar" style="animation-delay:.09s"></div>
+        <div class="bar" style="animation-delay:.18s"></div><div class="bar" style="animation-delay:.27s"></div>
+        <div class="bar" style="animation-delay:.36s"></div><div class="bar" style="animation-delay:.45s"></div>
         <div class="bar" style="animation-delay:.54s"></div>
-        <div class="bar" style="animation-delay:.45s"></div>
-        <div class="bar" style="animation-delay:.36s"></div>
-        <div class="bar" style="animation-delay:.27s"></div>
-        <div class="bar" style="animation-delay:.18s"></div>
-        <div class="bar" style="animation-delay:.09s"></div>
-        <div class="bar" style="animation-delay:.00s"></div>
+        <div class="bar" style="animation-delay:.45s"></div><div class="bar" style="animation-delay:.36s"></div>
+        <div class="bar" style="animation-delay:.27s"></div><div class="bar" style="animation-delay:.18s"></div>
+        <div class="bar" style="animation-delay:.09s"></div><div class="bar" style="animation-delay:.00s"></div>
       </div>
 
-      <!-- 로딩 -->
       <div class="spin-wrap" id="spinWrap">
         <div class="spinner"></div>
         <div class="load-txt">음성을 불러오는 중…</div>
       </div>
 
-      <!-- 재생 버튼 -->
       <button class="play-btn" id="playBtn" disabled onclick="togglePlay()">▶</button>
       <audio id="player"></audio>
 
-      <!-- 시크바 -->
       <div class="seek-wrap" id="seekWrap">
         <input class="seek-bar" id="seekBar" type="range" min="0" max="100" value="0" step="0.1">
         <div class="seek-time"><span id="timeCurrent">0:00</span></div>
@@ -413,7 +234,16 @@ footer {
       <div class="hint" id="hintMsg"></div>
     </div>
 
-    <!-- ★ 다운로드 섹션 -->
+    <!-- 저장 안내 (Google Drive 경고) -->
+    <div class="save-note" id="saveNote">
+      <p>
+        📁 <strong>Google Drive에서는 재생이 안 될 수 있어요.</strong><br>
+        파일 앱 또는 음악 앱에서 열어주세요.<br>
+        아이폰은 아래 버튼 → <strong>파일에 저장</strong>을 선택하세요.
+      </p>
+    </div>
+
+    <!-- 다운로드 -->
     <div class="dl-section" id="dlSection">
       <div class="dl-row">
         <div class="dl-info">
@@ -424,21 +254,19 @@ footer {
       </div>
     </div>
 
-    <!-- ★ 1년 정책 안내 -->
+    <!-- 1년 정책 -->
     <div class="policy-note" id="policyNote">
-      ※ 음성 파일은 서비스 제공일로부터 <strong>1년간</strong> 보관됩니다.<br>
+      ※ 음성 파일은 제공일로부터 <strong>1년간</strong> 보관됩니다.<br>
       소중한 목소리는 위 버튼으로 직접 저장해 두세요.
     </div>
 
     <footer>소중한 순간은 늘 여기에 · 늘스튜디오</footer>
   </div>
 
-  <!-- ── 완료 화면 ── -->
+  <!-- 완료 화면 -->
   <div class="done-wrap" id="doneWrap">
     <div class="hr" style="margin-bottom:1.75rem">
-      <div class="hr-line"></div>
-      <div class="hr-mark">✦</div>
-      <div class="hr-line"></div>
+      <div class="hr-line"></div><div class="hr-dot"></div><div class="hr-line"></div>
     </div>
     <span class="done-icon">🎓</span>
     <div class="done-title" id="doneTitle"></div>
@@ -458,25 +286,24 @@ footer {
   const urlName = decodeURIComponent(p.get('n') || '');
   const urlCls  = decodeURIComponent(p.get('c') || '');
 
-  const nameEl      = document.getElementById('nameEl');
-  const clsEl       = document.getElementById('clsEl');
-  const player      = document.getElementById('player');
-  const wave        = document.getElementById('wave');
-  const playBtn     = document.getElementById('playBtn');
-  const hintMsg     = document.getElementById('hintMsg');
-  const spinWrap    = document.getElementById('spinWrap');
-  const seekWrap    = document.getElementById('seekWrap');
-  const seekBar     = document.getElementById('seekBar');
-  const timeCurrent = document.getElementById('timeCurrent');
-  const playerWrap  = document.getElementById('playerWrap');
-  const doneWrap    = document.getElementById('doneWrap');
-  const doneTitle   = document.getElementById('doneTitle');
-  const doneMsg     = document.getElementById('doneMsg');
-  const dlSection   = document.getElementById('dlSection');
-  const policyNote  = document.getElementById('policyNote');
+  const nameEl     = document.getElementById('nameEl');
+  const clsEl      = document.getElementById('clsEl');
+  const player     = document.getElementById('player');
+  const wave       = document.getElementById('wave');
+  const playBtn    = document.getElementById('playBtn');
+  const hintMsg    = document.getElementById('hintMsg');
+  const spinWrap   = document.getElementById('spinWrap');
+  const seekWrap   = document.getElementById('seekWrap');
+  const seekBar    = document.getElementById('seekBar');
+  const timeCurrent= document.getElementById('timeCurrent');
+  const playerWrap = document.getElementById('playerWrap');
+  const doneWrap   = document.getElementById('doneWrap');
+  const doneTitle  = document.getElementById('doneTitle');
+  const doneMsg    = document.getElementById('doneMsg');
+  const dlSection  = document.getElementById('dlSection');
+  const saveNote   = document.getElementById('saveNote');
+  const policyNote = document.getElementById('policyNote');
 
-  // URL 파라미터는 로딩 중 임시 표시용
-  // ★ 보안: 서버 응답으로 실제 이름/반을 덮어씀 (URL 조작 방지)
   let verifiedName = urlName;
   let verifiedCls  = urlCls;
   let audioBlobUrl = '';
@@ -498,7 +325,7 @@ footer {
       const data = await res.json();
       if (!data.ok) throw new Error(data.error || '파일 로드 실패');
 
-      // ★ 서버가 이름/반을 반환하면 URL 파라미터 대신 서버 값 사용 (보안)
+      // 서버 이름/반 우선 (보안)
       if (data.name)      { verifiedName = data.name;      nameEl.textContent = data.name + '의 졸업 메시지'; }
       if (data.className) { verifiedCls  = data.className; clsEl.textContent  = data.className; }
 
@@ -519,23 +346,22 @@ footer {
 
   function fmt(sec) {
     if (!sec || isNaN(sec) || !isFinite(sec)) return '0:00';
-    const m = Math.floor(sec / 60);
-    const s = Math.floor(sec % 60);
-    return m + ':' + String(s).padStart(2, '0');
+    return Math.floor(sec/60) + ':' + String(Math.floor(sec%60)).padStart(2,'0');
   }
 
   function updateSeekColor(pct) {
     seekBar.style.background =
-      `linear-gradient(to right, var(--gold-lt) ${pct}%, var(--border-l) ${pct}%)`;
+      `linear-gradient(to right, var(--primary) ${pct}%, var(--border-l) ${pct}%)`;
   }
 
   player.addEventListener('canplay', () => {
-    spinWrap.style.display  = 'none';
-    seekWrap.style.display  = 'block';
-    dlSection.style.display = 'block';
+    spinWrap.style.display   = 'none';
+    seekWrap.style.display   = 'block';
+    dlSection.style.display  = 'block';
+    saveNote.style.display   = 'block';
     policyNote.style.display = 'block';
-    playBtn.disabled        = false;
-    hintMsg.textContent     = '버튼을 눌러 음성을 들어보세요';
+    playBtn.disabled         = false;
+    hintMsg.textContent      = '버튼을 눌러 음성을 들어보세요';
     updateSeekColor(0);
     player.play().catch(() => {});
   }, { once: true });
@@ -552,7 +378,7 @@ footer {
   seekBar.addEventListener('touchstart', () => { isSeeking = true; }, { passive: true });
   seekBar.addEventListener('input', () => {
     const pct = parseFloat(seekBar.value);
-    timeCurrent.textContent = fmt((pct / 100) * player.duration);
+    timeCurrent.textContent = fmt((pct/100) * player.duration);
     updateSeekColor(pct);
   });
   seekBar.addEventListener('change', () => {
@@ -587,29 +413,44 @@ footer {
   function replayAudio() {
     doneWrap.style.display   = 'none';
     playerWrap.style.display = 'block';
-    seekBar.value = 0;
-    updateSeekColor(0);
+    seekBar.value = 0; updateSeekColor(0);
     timeCurrent.textContent = '0:00';
-    player.currentTime = 0;
-    player.play();
+    player.currentTime = 0; player.play();
   }
 
-  // ★ 음성 파일 기기 저장
-  function downloadAudio() {
+  // ★ iOS: Web Share API → 공유 시트에서 "파일에 저장" 선택
+  // Android/PC: 일반 blob 다운로드
+  async function downloadAudio() {
     if (!audioBlobUrl) return;
     const ext = audioMime.includes('mp4') ? 'm4a'
               : audioMime.includes('ogg') ? 'ogg'
               : 'webm';
+    const filename = (verifiedName || '학생') + '_졸업메시지.' + ext;
+
+    // iOS Safari는 Web Share API로 처리
+    try {
+      if (navigator.canShare) {
+        const res  = await fetch(audioBlobUrl);
+        const blob = await res.blob();
+        const file = new File([blob], filename, { type: audioMime });
+        if (navigator.canShare({ files: [file] })) {
+          await navigator.share({ files: [file], title: filename });
+          return;
+        }
+      }
+    } catch (e) { /* Web Share 실패 시 일반 다운로드로 fallback */ }
+
+    // 일반 다운로드 (Android, PC)
     const a = document.createElement('a');
     a.href = audioBlobUrl;
-    a.download = (verifiedName || '학생') + '_졸업메시지.' + ext;
+    a.download = filename;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
   }
 
-  player.addEventListener('play',  () => { wave.className = 'waveform playing'; playBtn.textContent = '■'; });
-  player.addEventListener('pause', () => { wave.className = 'waveform';         playBtn.textContent = '▶'; });
+  player.addEventListener('play',  () => { wave.className='waveform playing'; playBtn.textContent='■'; });
+  player.addEventListener('pause', () => { wave.className='waveform';         playBtn.textContent='▶'; });
 </script>
 </body>
 </html>
