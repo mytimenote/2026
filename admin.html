@@ -3,80 +3,179 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>졸업앨범 관리자 — QR 일괄 생성</title>
+<title>늘스튜디오 — QR 관리</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;600&family=Noto+Sans+KR:wght@300;400;500&display=swap');
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-:root{
-  --gold:#c9a96e;--gold-dim:#8a6f3f;
-  --bg:#0f0e0d;--bg-card:#1a1814;--bg-input:#0d0c0b;
-  --border:#2a2720;--text:#f0ece4;--muted:#8a7f6e;--faint:#3a3428;
-  --green:#6ec98a;--green-bg:#131e17;--green-border:#1e3d28;
-  --red:#c96e6e;--red-bg:#1e1413;--red-border:#3d2020;
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&display=swap');
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:        #F7F8FA;
+  --card:      #FFFFFF;
+  --primary:   #3182F6;
+  --pri-lt:    #5B9DF8;
+  --pri-bg:    #EBF3FE;
+  --border:    #E5E8EB;
+  --text:      #191919;
+  --sub:       #4E4E4E;
+  --muted:     #8B95A1;
+  --faint:     #C6CAD0;
+  --input-bg:  #F2F4F6;
+  --red:       #F04452;
+  --red-bg:    #FFF2F3;
+  --red-border:#FDDDDD;
+  --green:     #2BA25B;
+  --green-bg:  #F0FAF4;
+  --shadow:    0 1px 3px rgba(0,0,0,.06), 0 4px 16px rgba(0,0,0,.05);
 }
-body{min-height:100vh;background:var(--bg);font-family:'Noto Sans KR',sans-serif;color:var(--text);padding:2.5rem 1.5rem}
-.page{max-width:880px;margin:0 auto}
-header{margin-bottom:2.5rem}
-.head-label{font-size:11px;letter-spacing:4px;color:var(--muted);margin-bottom:.75rem}
-h1{font-family:'Noto Serif KR',serif;font-size:26px;font-weight:600;margin-bottom:.4rem}
-.head-sub{font-size:13px;color:var(--muted);font-weight:300}
-.divider{width:32px;height:1px;background:var(--faint);margin:2rem 0}
-.card{background:var(--bg-card);border:1px solid var(--border);border-radius:16px;padding:1.5rem;margin-bottom:1.25rem}
-.card-title{font-size:12px;letter-spacing:2px;color:var(--muted);margin-bottom:1.25rem}
-.field{display:flex;flex-direction:column;gap:6px;margin-bottom:1rem}
-.field:last-of-type{margin-bottom:0}
-.lbl{font-size:11px;letter-spacing:2px;color:var(--muted)}
-input,select{width:100%;padding:10px 14px;background:var(--bg-input);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:14px;font-family:'Noto Sans KR',sans-serif;outline:none;transition:border-color .2s}
-input:focus,select:focus{border-color:var(--gold-dim)}
-input::placeholder{color:var(--faint)}
-select option{background:#1a1814}
-.btn-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:1.25rem}
-.btn{padding:10px 20px;border-radius:10px;border:1px solid var(--border);font-size:13px;font-family:'Noto Sans KR',sans-serif;cursor:pointer;font-weight:500;transition:background .15s,border-color .15s,transform .1s;background:transparent;color:var(--text);white-space:nowrap}
-.btn:active{transform:scale(.97)}
-.btn:disabled{opacity:.35;cursor:not-allowed;transform:none}
-.btn-primary{background:#231f16;border-color:var(--gold-dim);color:var(--gold)}
-.btn-primary:hover:not(:disabled){background:#2a2415;border-color:var(--gold)}
-.btn-ghost:hover:not(:disabled){background:#1e1c18}
-.alert{border-radius:10px;padding:.875rem 1.25rem;font-size:13px;line-height:1.8;margin-top:1rem;display:none}
-.alert.err{background:var(--red-bg);border:1px solid var(--red-border);color:var(--red)}
-.alert.ok{background:var(--green-bg);border:1px solid var(--green-border);color:var(--green)}
-.spin{display:inline-block;width:13px;height:13px;border:2px solid var(--faint);border-top-color:var(--gold);border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:6px}
-@keyframes spin{to{transform:rotate(360deg)}}
-.stats{display:flex;gap:1rem;margin-bottom:1.5rem;flex-wrap:wrap}
-.stat{background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:.875rem 1.25rem;min-width:120px}
-.stat-val{font-size:24px;font-weight:500;margin-bottom:2px}
-.stat-lbl{font-size:11px;color:var(--muted)}
-.qr-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(175px,1fr));gap:12px}
-.qr-card{background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:1.25rem;text-align:center;transition:border-color .2s}
-.qr-card:hover{border-color:var(--gold-dim)}
-.qr-box{background:#fff;border-radius:8px;padding:8px;display:inline-block;margin-bottom:.875rem}
-.qr-name{font-size:14px;font-weight:500;margin-bottom:3px}
-.qr-cls{font-size:11px;color:var(--muted)}
-.empty{text-align:center;padding:3rem;color:var(--muted);font-size:14px;grid-column:1/-1}
-footer{margin-top:3rem;font-size:11px;color:var(--faint);letter-spacing:2px;text-align:center}
+
+body {
+  min-height: 100vh;
+  background: var(--bg);
+  font-family: 'Noto Sans KR', sans-serif;
+  color: var(--text);
+  padding: 2.5rem 1.25rem 4rem;
+}
+
+@keyframes up     { from { opacity:0; transform:translateY(14px) } to { opacity:1; transform:none } }
+@keyframes fadeIn { from { opacity:0 } to { opacity:1 } }
+@keyframes spin   { to   { transform:rotate(360deg) } }
+
+.page {
+  max-width: 900px;
+  margin: 0 auto;
+  animation: up .5s cubic-bezier(.22,1,.36,1) both;
+}
+
+/* 헤더 */
+.top-header { margin-bottom: 2rem; }
+.studio-tag { font-size:11px; font-weight:600; color:var(--primary); letter-spacing:2.5px; text-transform:uppercase; margin-bottom:.5rem; }
+.page-title { font-size:26px; font-weight:700; color:var(--text); letter-spacing:-.5px; margin-bottom:.25rem; }
+.page-desc  { font-size:14px; color:var(--muted); font-weight:300; }
+
+/* 카드 */
+.card {
+  background: var(--card);
+  border-radius: 16px;
+  padding: 1.5rem;
+  margin-bottom: .75rem;
+  box-shadow: var(--shadow);
+}
+.card-title { font-size:13px; font-weight:600; color:var(--sub); margin-bottom:1.125rem; }
+
+/* 인풋 */
+.field { margin-bottom: .875rem; }
+.field:last-of-type { margin-bottom: 0; }
+.lbl { display:block; font-size:12px; font-weight:500; color:var(--muted); margin-bottom:.4rem; }
+input, select {
+  width:100%; padding:12px 14px;
+  background:var(--input-bg); border:1.5px solid transparent;
+  border-radius:10px; color:var(--text);
+  font-size:14px; font-family:'Noto Sans KR',sans-serif;
+  outline:none; transition:border-color .18s, background .18s;
+}
+input:focus, select:focus { background:var(--card); border-color:var(--pri-lt); }
+input::placeholder { color:var(--faint); }
+select { cursor:pointer; appearance:none; -webkit-appearance:none; }
+select option { background:var(--card); }
+
+/* 버튼 */
+.btn-row { display:flex; gap:8px; flex-wrap:wrap; margin-top:1rem; }
+.btn {
+  padding:11px 20px; border-radius:10px;
+  border:none; font-size:13px; font-family:'Noto Sans KR',sans-serif;
+  font-weight:500; cursor:pointer; white-space:nowrap;
+  transition:background .15s, transform .1s, opacity .15s;
+}
+.btn:active   { transform:scale(.97); }
+.btn:disabled { opacity:.4; cursor:not-allowed; transform:none; }
+.btn-primary { background:var(--primary); color:#fff; }
+.btn-primary:hover:not(:disabled) { background:var(--pri-lt); }
+.btn-ghost   { background:var(--input-bg); color:var(--sub); }
+.btn-ghost:hover:not(:disabled)   { background:#E9EAEC; }
+
+/* 알림 */
+.alert { border-radius:10px; padding:.75rem 1rem; font-size:13px; line-height:1.9; margin-top:.75rem; display:none; }
+.alert.err { background:var(--red-bg); border:1px solid var(--red-border); color:var(--red); }
+.alert.ok  { background:var(--green-bg); border:1px solid #B5DFC4; color:var(--green); }
+
+/* 스탯 */
+.stats { display:flex; gap:.75rem; margin-bottom:1rem; flex-wrap:wrap; }
+.stat { background:var(--card); border-radius:14px; padding:1rem 1.25rem; box-shadow:var(--shadow); min-width:130px; }
+.stat-val { font-size:26px; font-weight:700; color:var(--text); margin-bottom:2px; letter-spacing:-.5px; }
+.stat-lbl { font-size:11px; color:var(--muted); font-weight:400; }
+.stat-val.blue { color:var(--primary); }
+
+/* 액션 바 */
+.action-bar { display:flex; gap:8px; margin-bottom:1.25rem; flex-wrap:wrap; }
+
+/* QR 그리드 */
+.qr-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 10px;
+}
+.qr-card {
+  background: var(--card);
+  border-radius: 14px;
+  padding: 1.125rem 1rem 1rem;
+  text-align: center;
+  box-shadow: var(--shadow);
+  transition: transform .15s, box-shadow .15s;
+}
+.qr-card:hover { transform:translateY(-2px); box-shadow:0 4px 20px rgba(0,0,0,.09); }
+.qr-box {
+  background: #fff;
+  border-radius: 8px;
+  padding: 6px;
+  display: inline-block;
+  margin-bottom: .75rem;
+  border: 1px solid var(--border);
+}
+.qr-name { font-size:13px; font-weight:600; color:var(--text); margin-bottom:2px; }
+.qr-cls  { font-size:11px; color:var(--muted); }
+
+.empty {
+  grid-column: 1/-1;
+  text-align: center;
+  padding: 3rem;
+  color: var(--muted);
+  font-size:14px;
+}
+
+/* 로딩 인디케이터 */
+.loading-row { display:none; align-items:center; gap:8px; font-size:13px; color:var(--muted); margin-top:.75rem; }
+.spinner { display:inline-block; width:14px; height:14px; border:2px solid var(--faint); border-top-color:var(--primary); border-radius:50%; animation:spin .7s linear infinite; }
+
+/* 섹션 구분 */
+.section { margin-bottom: 1.5rem; }
+
+footer { margin-top:3rem; text-align:center; font-size:12px; color:var(--faint); letter-spacing:.3px; font-weight:300; }
 </style>
 </head>
 <body>
 <div class="page">
-  <header>
-    <div class="head-label">ADMIN</div>
-    <h1>졸업앨범 QR 일괄 생성</h1>
-    <p class="head-sub">학교별로 학생 목록을 불러와 QR코드를 일괄 다운로드합니다</p>
-  </header>
-  <div class="divider"></div>
 
-  <div class="card">
-    <div class="card-title">SETTINGS</div>
+  <!-- 헤더 -->
+  <div class="top-header">
+    <div class="studio-tag">늘스튜디오</div>
+    <div class="page-title">QR 일괄 생성</div>
+    <div class="page-desc">학교별로 학생 목록을 불러와 QR코드를 다운로드합니다</div>
+  </div>
+
+  <!-- 설정 카드 -->
+  <div class="card section">
+    <div class="card-title">설정</div>
     <div class="field">
-      <span class="lbl">Google Apps Script 웹앱 URL</span>
+      <label class="lbl">Google Apps Script 웹앱 URL</label>
       <input id="gasUrl" type="text" placeholder="https://script.google.com/macros/s/…/exec" />
     </div>
     <div class="field">
-      <span class="lbl">GitHub Pages 기본 URL</span>
-      <input id="pagesUrl" type="text" placeholder="https://anosenstudio.github.io/2026-album" />
+      <label class="lbl">GitHub Pages 기본 URL</label>
+      <input id="pagesUrl" type="text" placeholder="https://username.github.io/repo-name" />
     </div>
     <div class="btn-row">
       <button class="btn btn-primary" onclick="loadSchools()">학교 목록 불러오기</button>
@@ -86,37 +185,42 @@ footer{margin-top:3rem;font-size:11px;color:var(--faint);letter-spacing:2px;text
     <div class="alert ok"  id="settingsOk"></div>
   </div>
 
-  <div class="card">
+  <!-- 학교 선택 카드 -->
+  <div class="card section">
     <div class="card-title">학교 선택</div>
     <div class="field" style="margin-bottom:0">
       <select id="schoolSelect" onchange="loadStudents()">
-        <option value="">-- 먼저 학교 목록을 불러오세요 --</option>
+        <option value="">— 먼저 학교 목록을 불러오세요 —</option>
       </select>
     </div>
-    <div id="loadingStudents" style="display:none;margin-top:.75rem;font-size:13px;color:var(--muted)">
-      <span class="spin"></span>불러오는 중…
+    <div class="loading-row" id="loadingRow">
+      <span class="spinner"></span> 불러오는 중…
     </div>
   </div>
 
-  <div id="resultSection" style="display:none">
+  <!-- 결과 섹션 -->
+  <div id="resultSection" style="display:none; animation:fadeIn .4s ease both">
+
     <div class="stats">
       <div class="stat">
-        <div class="stat-val" id="statCount">0</div>
+        <div class="stat-val blue" id="statCount">0</div>
         <div class="stat-lbl">녹음 완료</div>
       </div>
       <div class="stat">
-        <div class="stat-val" id="statSchool" style="font-size:15px;padding-top:6px">—</div>
-        <div class="stat-lbl">학교</div>
+        <div class="stat-val" id="statSchool" style="font-size:16px; padding-top:6px">—</div>
+        <div class="stat-lbl">선택된 학교</div>
       </div>
     </div>
-    <div class="btn-row" style="margin-bottom:1.25rem">
-      <button class="btn btn-primary" id="dlBtn" onclick="downloadZip()">QR 전체 ZIP 다운로드</button>
+
+    <div class="action-bar">
+      <button class="btn btn-primary" id="dlBtn" onclick="downloadZip()">ZIP 다운로드</button>
       <button class="btn btn-ghost"   onclick="loadStudents()">새로고침</button>
     </div>
+
     <div class="qr-grid" id="qrGrid"></div>
   </div>
 
-  <footer>졸업앨범 음성 QR 관리 시스템</footer>
+  <footer>졸업앨범 음성 QR 관리 · 늘스튜디오</footer>
 </div>
 
 <script>
@@ -130,9 +234,8 @@ footer{margin-top:3rem;font-size:11px;color:var(--faint);letter-spacing:2px;text
   function saveSettings() {
     localStorage.setItem('gasUrl',   document.getElementById('gasUrl').value.trim());
     localStorage.setItem('pagesUrl', document.getElementById('pagesUrl').value.trim());
-    showMsg('settingsOk', '설정이 저장됐습니다.');
+    showMsg('settingsOk', '✓ 설정이 저장됐습니다.');
   }
-
   function getGasUrl()   { return document.getElementById('gasUrl').value.trim(); }
   function getPagesUrl() { return document.getElementById('pagesUrl').value.trim().replace(/\/$/, ''); }
 
@@ -143,7 +246,7 @@ footer{margin-top:3rem;font-size:11px;color:var(--faint);letter-spacing:2px;text
       const res  = await fetch(url + '?action=schools');
       const data = await res.json();
       const sel  = document.getElementById('schoolSelect');
-      sel.innerHTML = '<option value="">-- 학교를 선택하세요 --</option>' +
+      sel.innerHTML = '<option value="">— 학교를 선택하세요 —</option>' +
         data.schools.map(s => `<option value="${s}">${s}</option>`).join('');
       document.getElementById('settingsErr').style.display = 'none';
     } catch {
@@ -154,27 +257,25 @@ footer{margin-top:3rem;font-size:11px;color:var(--faint);letter-spacing:2px;text
   async function loadStudents() {
     const school = document.getElementById('schoolSelect').value;
     if (!school) return;
-    document.getElementById('loadingStudents').style.display = 'block';
-    document.getElementById('resultSection').style.display   = 'none';
+    document.getElementById('loadingRow').style.display    = 'flex';
+    document.getElementById('resultSection').style.display = 'none';
     try {
       const res  = await fetch(getGasUrl() + '?action=list&school=' + encodeURIComponent(school));
       const data = await res.json();
       students   = data.students || [];
-      document.getElementById('loadingStudents').style.display = 'none';
-      document.getElementById('resultSection').style.display   = 'block';
+      document.getElementById('loadingRow').style.display    = 'none';
+      document.getElementById('resultSection').style.display = 'block';
       document.getElementById('statCount').textContent  = students.length;
       document.getElementById('statSchool').textContent = school;
       renderGrid(school);
     } catch {
-      document.getElementById('loadingStudents').style.display = 'none';
+      document.getElementById('loadingRow').style.display = 'none';
       alert('학생 목록을 불러오는 데 실패했습니다.');
     }
   }
 
-  // QR URL: fileId + 이름 + 학반 직접 포함 → play.html이 GAS 없이 바로 재생
+  // ★ shortId 우선, 없으면 fileId fallback
   function makeUrl(s) {
-    // ★ shortId 사용 → URL 최소화 → QR 단순화
-    // shortId 없는 구버전 레코드는 fileId로 fallback
     if (s.shortId) return getPagesUrl() + '/play.html?id=' + s.shortId;
     return getPagesUrl() + '/play.html?f=' + encodeURIComponent(s.fileId);
   }
@@ -196,9 +297,9 @@ footer{margin-top:3rem;font-size:11px;color:var(--faint);letter-spacing:2px;text
     students.forEach((s, i) => {
       new QRCode(document.getElementById('qr-box-' + i), {
         text:         makeUrl(s),
-        width:        160,
-        height:       160,
-        colorDark:    '#000000',
+        width:        148,
+        height:       148,
+        colorDark:    '#191919',
         colorLight:   '#ffffff',
         correctLevel: QRCode.CorrectLevel.L
       });
@@ -210,7 +311,7 @@ footer{margin-top:3rem;font-size:11px;color:var(--faint);letter-spacing:2px;text
     const school = document.getElementById('schoolSelect').value;
     const btn    = document.getElementById('dlBtn');
     btn.disabled = true;
-    btn.innerHTML = '<span class="spin"></span>ZIP 생성 중…';
+    btn.textContent = '생성 중…';
 
     const zip   = new JSZip();
     const tasks = students.map((s, i) => new Promise(resolve => {
@@ -222,7 +323,6 @@ footer{margin-top:3rem;font-size:11px;color:var(--faint);letter-spacing:2px;text
         resolve();
       }, 'image/png');
     }));
-
     await Promise.all(tasks);
 
     const csvRows = [['학교','이름','학반','QR URL']];
@@ -233,7 +333,7 @@ footer{margin-top:3rem;font-size:11px;color:var(--faint);letter-spacing:2px;text
     saveAs(blob, school + '_QR코드.zip');
 
     btn.disabled = false;
-    btn.textContent = 'QR 전체 ZIP 다운로드';
+    btn.textContent = 'ZIP 다운로드';
   }
 
   function showMsg(id, msg) {
