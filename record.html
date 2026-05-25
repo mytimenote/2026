@@ -100,6 +100,10 @@ select option{background:var(--card)}
 .submitted-title{font-size:19px;font-weight:700;color:var(--text);margin-bottom:.5rem}
 .submitted-msg{font-size:13px;color:var(--muted);line-height:2;font-weight:300}
 footer{margin-top:2.5rem;text-align:center;font-size:12px;color:var(--faint);letter-spacing:.3px;font-weight:300}
+/* 구분 토글 */
+.type-toggle{display:flex;gap:4px;background:var(--input-bg);border-radius:10px;padding:4px;margin-bottom:1rem}
+.type-btn{flex:1;padding:10px;border-radius:7px;border:none;font-size:13px;font-family:'Noto Sans KR',sans-serif;font-weight:500;cursor:pointer;color:var(--muted);background:transparent;transition:background .15s,color .15s}
+.type-btn.active{background:var(--card);color:var(--text);box-shadow:0 1px 4px rgba(0,0,0,.08)}
 </style>
 </head>
 <body>
@@ -162,12 +166,17 @@ footer{margin-top:2.5rem;text-align:center;font-size:12px;color:var(--faint);let
       </div>
     </div>
     <div class="card">
-      <div class="card-title">학생 정보</div>
+      <div class="card-title" id="infoCardTitle">학생 정보</div>
+      <div class="type-toggle">
+        <button class="type-btn active" id="typeStudent" onclick="switchPersonType('student')">🎓 학생</button>
+        <button class="type-btn"        id="typeTeacher" onclick="switchPersonType('teacher')">👨‍🏫 교직원</button>
+      </div>
       <div class="field">
         <label class="lbl">이름</label>
         <input id="inputName" type="text" placeholder="예: 홍길동" autocomplete="off" />
       </div>
-      <div class="field" style="margin-bottom:0">
+      <!-- 학생 필드 -->
+      <div id="studentFields" class="field" style="margin-bottom:0">
         <label class="lbl">반 · 번호</label>
         <div class="class-row">
           <select id="selectBan">
@@ -187,6 +196,18 @@ footer{margin-top:2.5rem;text-align:center;font-size:12px;color:var(--faint);let
             <option>31</option><option>32</option><option>33</option><option>34</option><option>35</option>
           </select>
         </div>
+      </div>
+      <!-- 교직원 필드 -->
+      <div id="teacherFields" class="field" style="display:none;margin-bottom:0">
+        <label class="lbl">직책</label>
+        <select id="selectRole">
+          <option value="">직책 선택 ▾</option>
+          <option>교장선생님</option>
+          <option>교감선생님</option>
+          <option>담임선생님</option>
+          <option>부장선생님</option>
+          <option>선생님</option>
+        </select>
       </div>
     </div>
     <div class="card">
@@ -317,7 +338,21 @@ footer{margin-top:2.5rem;text-align:center;font-size:12px;color:var(--faint);let
     if(secs>=MAX_SEC){stopRec();setStatus('40초 제한에 도달해 자동으로 정지됐습니다');}
   }
   function resetTimerUI(){$('timer').textContent='00:00';$('timer').className='timer';$('elapsedLbl').textContent='0초';$('remainLbl').textContent=MAX_SEC+'초 남음';$('remainLbl').className='time-remaining';$('recBar').style.width='0%';$('recBar').className='rec-progress-bar';}
-  function getClassName(){const ban=$('selectBan').value,num=$('selectNum').value;return(!ban||!num)?'':ban+'반 '+num+'번';}
+  function getPersonType(){ return $('typeTeacher').classList.contains('active') ? 'teacher' : 'student'; }
+  function getClassName(){
+    if(getPersonType()==='teacher') return $('selectRole').value||'';
+    const ban=$('selectBan').value,num=$('selectNum').value;
+    return(!ban||!num)?'':ban+'반 '+num+'번';
+  }
+  function switchPersonType(type){
+    const t=(type==='teacher');
+    $('typeStudent').classList.toggle('active',!t);
+    $('typeTeacher').classList.toggle('active',t);
+    $('studentFields').style.display=t?'none':'block';
+    $('teacherFields').style.display=t?'block':'none';
+    $('infoCardTitle').textContent=t?'교직원 정보':'학생 정보';
+    $('selectBan').value='';$('selectNum').value='';$('selectRole').value='';
+  }
 
   async function toggleRecord(){
     if(!isRec){
@@ -378,7 +413,7 @@ footer{margin-top:2.5rem;text-align:center;font-size:12px;color:var(--faint);let
     const className=getClassName();
     if(!school)return showErr('학교 이름을 입력해 주세요.');
     if(!name)return showErr('이름을 입력해 주세요.');
-    if(!className)return showErr('반과 번호를 선택해 주세요.');
+    if(!className)return showErr(getPersonType()==='teacher'?'직책을 선택해 주세요.':'반과 번호를 선택해 주세요.');
     if(!blob)return showErr('먼저 녹음을 완료해 주세요.');
     $('preview').pause();clearAlerts();$('alertLoad').style.display='block';
     $('listenBtn').disabled=true;$('saveBtn').disabled=true;$('retryBtn').disabled=true;

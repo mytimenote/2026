@@ -145,6 +145,16 @@ select{cursor:pointer;appearance:none;-webkit-appearance:none}
 .loading-row{display:none;align-items:center;gap:8px;font-size:13px;color:var(--muted);margin-top:.75rem}
 .spinner{display:inline-block;width:14px;height:14px;border:2px solid var(--faint);border-top-color:var(--primary);border-radius:50%;animation:spin .7s linear infinite}
 footer{margin-top:3rem;text-align:center;font-size:12px;color:var(--faint);letter-spacing:.3px;font-weight:300}
+/* 일괄삭제 */
+.bulk-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:.75rem}
+.bulk-all-label{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:var(--sub);cursor:pointer}
+.bulk-all-label input[type="checkbox"]{width:16px;height:16px;accent-color:var(--red);cursor:pointer}
+.bulk-sel-count{font-size:12px;color:var(--muted)}
+.bulk-list{display:flex;flex-direction:column;gap:6px;max-height:280px;overflow-y:auto}
+.bulk-item{display:flex;align-items:center;gap:10px;padding:.625rem .875rem;background:var(--bg);border-radius:10px;border:1px solid var(--border);cursor:pointer}
+.bulk-item input[type="checkbox"]{width:16px;height:16px;accent-color:var(--red);cursor:pointer;flex-shrink:0}
+.bulk-item-name{font-size:13px;font-weight:600;color:var(--text);flex:1}
+.bulk-empty{text-align:center;padding:1.5rem;color:var(--muted);font-size:13px}
 </style>
 </head>
 <body>
@@ -231,6 +241,27 @@ footer{margin-top:3rem;text-align:center;font-size:12px;color:var(--faint);lette
       </div>
       <div class="alert err" id="pwDelErr" style="margin-top:.75rem"></div>
       <div class="alert ok"  id="pwDelOk"  style="margin-top:.75rem"></div>
+    </div>
+
+    <!-- ── 일괄삭제 카드 ── -->
+    <div class="card" style="border:1.5px solid var(--red-bd)">
+      <div class="card-title" style="color:var(--red)">🗑 연도 마감 — 학교 일괄삭제</div>
+      <p style="font-size:12px;color:var(--muted);line-height:1.9;margin-bottom:.875rem">
+        음성 파일(Drive)은 그대로 보존되며, 시트 데이터와 비밀번호만 삭제돼요.<br>
+        삭제 후에도 <strong>QR 재생은 계속 작동</strong>합니다.
+      </p>
+      <div class="bulk-header">
+        <label class="bulk-all-label">
+          <input type="checkbox" id="bulkAll" onchange="toggleBulkAll(this.checked)" /> 전체 선택
+        </label>
+        <span class="bulk-sel-count" id="bulkSelCount">0개 선택됨</span>
+      </div>
+      <div class="bulk-list" id="bulkList"><div class="bulk-empty">학교 목록을 불러오는 중…</div></div>
+      <div class="btn-row" style="margin-top:1rem">
+        <button class="btn" style="background:var(--red);color:#fff" id="bulkDelBtn" onclick="bulkDeleteSchools()">선택 삭제</button>
+      </div>
+      <div class="alert err" id="bulkErr" style="margin-top:.75rem"></div>
+      <div class="alert ok"  id="bulkOk"  style="margin-top:.75rem"></div>
     </div>
 
     <div class="card" style="background:var(--pri-bg);border:1.5px solid rgba(49,130,246,.2)">
@@ -407,6 +438,7 @@ footer{margin-top:3rem;text-align:center;font-size:12px;color:var(--faint);lette
       allPasswords = data.passwords || [];
       const q = document.getElementById('pwSearchInput')?.value || '';
       renderPasswords(q);
+      renderBulkList();
     } catch {
       document.getElementById('pwList').innerHTML = '<div class="pw-empty">불러오기 실패</div>';
     }
@@ -719,6 +751,62 @@ footer{margin-top:3rem;text-align:center;font-size:12px;color:var(--faint);lette
       if (errEl) errEl.textContent = '오류: ' + err.message;
       if (btn) btn.disabled = false;
     }
+  }
+
+  /* ── 일괄삭제 ── */
+  function renderBulkList() {
+    const list    = document.getElementById('bulkList');
+    const countEl = document.getElementById('bulkSelCount');
+    if (!allPasswords.length) {
+      list.innerHTML = '<div class="bulk-empty">등록된 학교가 없습니다</div>';
+      countEl.textContent = '0개 선택됨';
+      return;
+    }
+    list.innerHTML = allPasswords.map(p => `
+      <label class="bulk-item">
+        <input type="checkbox" class="bulk-chk" value="${p.school.replace(/"/g,'&quot;')}"
+          onchange="updateBulkCount()" />
+        <span class="bulk-item-name">🏫 ${p.school}</span>
+      </label>`).join('');
+    document.getElementById('bulkAll').checked = false;
+    countEl.textContent = '0개 선택됨';
+  }
+
+  function toggleBulkAll(checked) {
+    document.querySelectorAll('.bulk-chk').forEach(cb => cb.checked = checked);
+    updateBulkCount();
+  }
+
+  function updateBulkCount() {
+    const n   = document.querySelectorAll('.bulk-chk:checked').length;
+    const all = document.querySelectorAll('.bulk-chk').length;
+    document.getElementById('bulkSelCount').textContent = n + '개 선택됨';
+    document.getElementById('bulkAll').checked = (n > 0 && n === all);
+  }
+
+  async function bulkDeleteSchools() {
+    const checked = [...document.querySelectorAll('.bulk-chk:checked')].map(cb => cb.value);
+    if (!checked.length) { showMsg('bulkErr', '삭제할 학교를 선택해 주세요.'); return; }
+    if (!confirm(`선택한 ${checked.length}개 학교를 삭제할까요?\n\n✓ 음성 파일(Drive) 보존 → QR 재생 유지\n✗ 시트 데이터·비밀번호 삭제`)) return;
+    if (!confirm(`⚠️ 최종 확인\n\n${checked.length}개 학교 데이터를 삭제합니다.\n이 작업은 되돌릴 수 없습니다.\n\n계속하시겠습니까?`)) return;
+    const btn = document.getElementById('bulkDelBtn');
+    btn.disabled = true; btn.textContent = '삭제 중…';
+    let ok = 0, fail = 0;
+    for (const school of checked) {
+      try {
+        const res  = await fetch(getGasUrl(), {
+          method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'},
+          body: JSON.stringify({ action:'deleteSchool', school }), redirect:'follow'
+        });
+        const data = await res.json();
+        data.success ? ok++ : fail++;
+      } catch { fail++; }
+    }
+    btn.disabled = false; btn.textContent = '선택 삭제';
+    if (fail === 0) showMsg('bulkOk', `✓ ${ok}개 학교가 삭제됐습니다.`);
+    else showMsg('bulkErr', `${ok}개 성공 / ${fail}개 실패`);
+    loadSchools();
+    loadPasswords();
   }
 
   function showMsg(id, msg) {
