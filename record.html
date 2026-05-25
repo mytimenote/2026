@@ -100,6 +100,25 @@ select option{background:var(--card)}
 .submitted-title{font-size:19px;font-weight:700;color:var(--text);margin-bottom:.5rem}
 .submitted-msg{font-size:13px;color:var(--muted);line-height:2;font-weight:300}
 footer{margin-top:2.5rem;text-align:center;font-size:12px;color:var(--faint);letter-spacing:.3px;font-weight:300}
+/* 접이식 안내 */
+.guide-wrap{margin-top:.75rem}
+.guide-btn{width:100%;padding:13px 16px;background:var(--card);border:1.5px solid var(--border);border-radius:12px;display:flex;align-items:center;justify-content:space-between;font-size:13px;font-family:'Noto Sans KR',sans-serif;font-weight:600;color:var(--sub);cursor:pointer;transition:background .15s,border-color .15s;box-shadow:var(--shadow)}
+.guide-btn:hover{background:var(--input-bg);border-color:var(--pri-lt)}
+.guide-arrow{font-size:11px;color:var(--muted);transition:transform .25s}
+.guide-arrow.open{transform:rotate(180deg)}
+.guide-content{display:none;margin-top:.5rem;display:none;flex-direction:column;gap:.5rem}
+.guide-content.open{display:flex;animation:fadeIn .25s ease both}
+.guide-section{background:var(--card);border-radius:12px;padding:1.125rem 1.25rem;box-shadow:var(--shadow)}
+.guide-section-title{font-size:12px;font-weight:700;color:var(--primary);margin-bottom:.75rem}
+.guide-item{font-size:13px;color:var(--sub);line-height:1.9;padding-left:.25rem}
+.guide-item+.guide-item{margin-top:.2rem}
+.guide-item::before{content:'·';color:var(--faint);margin-right:.5rem}
+.guide-warn{font-size:12px;color:var(--red);margin-top:.625rem;line-height:1.8}
+.guide-warn span{display:block}
+.guide-example{background:var(--input-bg);border-radius:10px;padding:.875rem 1rem;margin-top:.375rem}
+.guide-example+.guide-example{margin-top:.5rem}
+.guide-ex-label{font-size:11px;font-weight:700;color:var(--primary);margin-bottom:.3rem}
+.guide-ex-text{font-size:12.5px;color:var(--sub);line-height:1.85;font-style:italic}
 /* 구분 토글 */
 .type-toggle{display:flex;gap:4px;background:var(--input-bg);border-radius:10px;padding:4px;margin-bottom:1rem}
 .type-btn{flex:1;padding:10px;border-radius:7px;border:none;font-size:13px;font-family:'Noto Sans KR',sans-serif;font-weight:500;cursor:pointer;color:var(--muted);background:transparent;transition:background .15s,color .15s}
@@ -145,6 +164,64 @@ footer{margin-top:2.5rem;text-align:center;font-size:12px;color:var(--faint);let
         <span class="btn-label">확인</span>
       </button>
     </div>
+    <!-- 접이식 안내 -->
+    <div class="guide-wrap">
+      <button class="guide-btn" onclick="toggleGuide()">
+        <span>📖 녹음 방법 안내</span>
+        <span class="guide-arrow" id="guideArrow">▾</span>
+      </button>
+      <div class="guide-content" id="guideContent">
+
+        <!-- 녹음 방법 -->
+        <div class="guide-section">
+          <div class="guide-section-title">📖 녹음 방법</div>
+          <div class="guide-item">선생님께 받은 비밀번호를 입력하세요</div>
+          <div class="guide-item">이름, 반, 번호를 정확히 입력하세요</div>
+          <div class="guide-item">녹음 버튼을 눌러 40초 이내로 말하세요</div>
+          <div class="guide-item">다시 듣기로 확인 후 저장하세요</div>
+          <div class="guide-warn">
+            <span>⚠️ 같은 이름·반·번호로는 1회만 녹음 가능합니다</span>
+            <span>⚠️ 문제가 생긴 경우 선생님께 문의하세요</span>
+          </div>
+        </div>
+
+        <!-- 주의사항 -->
+        <div class="guide-section">
+          <div class="guide-section-title">🎙 녹음 시 주의사항</div>
+          <div class="guide-item">조용한 곳에서 녹음하세요</div>
+          <div class="guide-item">휴대폰을 입에서 주먹 하나 정도 거리에 두고 말하세요</div>
+          <div class="guide-item">녹음 중 전화나 알림이 오지 않도록 해주세요</div>
+          <div class="guide-item">저장 완료 전에 화면을 닫으면 처음부터 다시 해야 해요</div>
+        </div>
+
+        <!-- 예시 -->
+        <div class="guide-section">
+          <div class="guide-section-title">💬 이렇게 말해보세요</div>
+          <div class="guide-example">
+            <div class="guide-ex-label">1. 고마운 선생님에게</div>
+            <div class="guide-ex-text">"선생님, 1년 동안 저희를 가르쳐 주셔서 정말 감사합니다. 선생님 덕분에 많이 성장할 수 있었어요…"</div>
+          </div>
+          <div class="guide-example">
+            <div class="guide-ex-label">2. 미래의 나에게 보내는 메시지</div>
+            <div class="guide-ex-text">"10년 후의 나에게. 지금 이 순간을 기억해? 꿈을 향해 열심히 달리고 있는 지금의 나를 잊지 마…"</div>
+          </div>
+          <div class="guide-example">
+            <div class="guide-ex-label">3. 사랑하는 부모님에게</div>
+            <div class="guide-ex-text">"엄마, 아빠 항상 응원해 주셔서 감사해요. 덕분에 씩씩하게 학교생활을 마칠 수 있었어요…"</div>
+          </div>
+          <div class="guide-example">
+            <div class="guide-ex-label">4. 소중한 친구들에게</div>
+            <div class="guide-ex-text">"우리 같은 반이 되어서 정말 좋았어. 함께 웃고 떠들었던 시간들 절대 잊지 못할 거야…"</div>
+          </div>
+          <div class="guide-example">
+            <div class="guide-ex-label">5. 졸업하는 나 자신에게</div>
+            <div class="guide-ex-text">"6년 동안 정말 잘 버텼어. 앞으로 어떤 일이 있어도 지금처럼 씩씩하게 나아가길 바라…"</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
     <footer>졸업앨범 음성 메시지</footer>
   </div>
 
@@ -289,6 +366,14 @@ footer{margin-top:2.5rem;text-align:center;font-size:12px;color:var(--faint);let
   else { schoolNameEl.textContent='졸업앨범 녹음'; schoolNameEl.classList.add('placeholder'); $('schoolCard').style.display='block'; }
 
   $('pwScreen').style.display = 'block';
+
+  function toggleGuide() {
+    const content = document.getElementById('guideContent');
+    const arrow   = document.getElementById('guideArrow');
+    const isOpen  = content.classList.contains('open');
+    content.classList.toggle('open', !isOpen);
+    arrow.classList.toggle('open', !isOpen);
+  }
 
   function togglePwVisible() {
     const i=$('pwInput');
