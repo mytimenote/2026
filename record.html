@@ -90,11 +90,17 @@ select option{background:var(--card)}
 .pw-btn.loading .btn-spin{display:block}
 .pw-btn.loading .btn-label{opacity:.7}
 /* 완료 */
-.done{display:none;text-align:center;padding:2rem 0;animation:fadeIn .6s ease both}
-.done .icon{font-size:56px;display:block;margin-bottom:1.25rem;animation:bloom .6s cubic-bezier(.22,1,.36,1) both}
-.done .title{font-size:20px;font-weight:700;color:var(--text);margin-bottom:.5rem;letter-spacing:-.3px}
-.done .msg{font-size:14px;color:var(--muted);line-height:2.1;font-weight:300}
-.done-divider{width:32px;height:1px;background:var(--border);margin:1.5rem auto}
+.done{display:none;animation:fadeIn .6s ease both}
+.done-letter{width:100%;height:200px;border-radius:16px;overflow:hidden;position:relative;margin-bottom:1.25rem;box-shadow:var(--shadow)}
+.done-letter img{width:100%;height:100%;object-fit:cover;object-position:center 40%}
+.done-letter-overlay{position:absolute;inset:0;background:linear-gradient(to bottom,rgba(0,0,0,.05) 0%,rgba(0,0,0,.45) 100%);display:flex;flex-direction:column;align-items:center;justify-content:flex-end;padding:1.5rem 1.25rem}
+.done-letter-icon{font-size:36px;margin-bottom:.5rem;animation:bloom .7s cubic-bezier(.22,1,.36,1) both}
+.done-letter-name{font-size:18px;font-weight:700;color:#fff;letter-spacing:-.3px;text-shadow:0 1px 6px rgba(0,0,0,.3);text-align:center}
+.done-card{background:#FDFAF5;border-radius:16px;padding:1.5rem 1.375rem;box-shadow:var(--shadow);border:1px solid #EDE8DC;text-align:center}
+.done-card-msg{font-size:14px;color:#6B5E4E;line-height:2.2;font-weight:300}
+.done-card-msg strong{font-weight:600;color:#4A3F32}
+.done-divider{width:28px;height:1px;background:#DDD5C8;margin:1.125rem auto}
+.done-card-sub{font-size:12.5px;color:#9E8F80;line-height:2}
 .submitted-wrap{display:none;text-align:center;padding:2rem 0;animation:fadeIn .5s ease both}
 .submitted-icon{font-size:52px;display:block;margin-bottom:1rem}
 .submitted-title{font-size:19px;font-weight:700;color:var(--text);margin-bottom:.5rem}
@@ -336,11 +342,25 @@ footer{margin-top:2.5rem;text-align:center;font-size:12px;color:var(--faint);let
 
   <!-- 완료 -->
   <div class="done" id="done">
-    <span class="icon">🎉</span>
-    <div class="title" id="doneTitle"></div>
-    <div class="done-divider"></div>
-    <div class="msg">졸업을 진심으로 축하해요.<br>졸업앨범 QR코드를 스캔하면<br>이 목소리를 다시 들을 수 있어요 🎓</div>
-    <footer style="margin-top:2.5rem">졸업앨범 음성 메시지</footer>
+    <div class="done-letter">
+      <img src="./letter.jpg" alt="편지" />
+      <div class="done-letter-overlay">
+        <span class="done-letter-icon">💌</span>
+        <div class="done-letter-name" id="doneTitle"></div>
+      </div>
+    </div>
+    <div class="done-card">
+      <div class="done-card-msg">
+        지금 이 순간의 목소리가<br>
+        <strong>졸업앨범 속에 영원히 남아요.</strong>
+      </div>
+      <div class="done-divider"></div>
+      <div class="done-card-sub">
+        훗날 졸업앨범 QR코드를 스캔하면<br>
+        오늘의 이 목소리를 다시 만날 수 있어요 🎓
+      </div>
+    </div>
+    <footer style="margin-top:2rem">졸업앨범 음성 메시지</footer>
   </div>
 </div>
 
@@ -523,7 +543,7 @@ footer{margin-top:2.5rem;text-align:center;font-size:12px;color:var(--faint);let
       const data = await uploadWithRetry({school,name,className,audioBase64:base64,mimeType});
       $('alertLoad').style.display='none';
       if(data.success){
-        $('formWrap').style.display='none';$('doneTitle').textContent=name+'님의 목소리가 저장됐어요!';$('done').style.display='block';
+        $('formWrap').style.display='none';$('doneTitle').textContent=name+'님의 목소리가 담겼어요';$('done').style.display='block';
       }else if(data.error==='ALREADY_SUBMITTED'){
         $('formWrap').style.display='none';$('submittedWrap').style.display='block';
       }else throw new Error(data.error||'업로드 실패');
