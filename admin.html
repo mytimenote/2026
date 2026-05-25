@@ -419,13 +419,19 @@ footer{margin-top:3rem;text-align:center;font-size:12px;color:var(--faint);lette
     await Promise.all(students.map((s,i) => new Promise(resolve => {
       const canvas = document.getElementById('qr-box-'+i)?.querySelector('canvas');
       if (!canvas) return resolve();
-      canvas.toBlob(blob => { zip.file(school+'_'+s.name+'_'+s.className+'.png', blob); resolve(); }, 'image/png');
+      canvas.toBlob(blob => { zip.file(makeQrFileName(school, s), blob); resolve(); }, 'image/png');
     })));
     const csvRows = [['학교','이름','학반','QR URL']];
     students.forEach(s => csvRows.push([school, s.name, s.className, makePlayUrl(s)]));
     zip.file('학생목록.csv', '\uFEFF' + csvRows.map(r=>r.join(',')).join('\n'));
     saveAs(await zip.generateAsync({type:'blob'}), school+'_QR코드.zip');
     btn.disabled = false; btn.textContent = 'ZIP 다운로드';
+  }
+
+  function makeQrFileName(school, s) {
+    const m = (s.className || '').match(/(\d+)반\s*(\d+)번/);
+    if (m) return school + '_' + m[1] + '반_' + m[2] + '번_' + s.name + '_QR.png';
+    return school + '_' + (s.className || '') + '_' + s.name + '_QR.png';
   }
 
   /* ── 비밀번호 관리 ── */
