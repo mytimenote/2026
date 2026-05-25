@@ -292,7 +292,7 @@ footer{margin-top:3rem;text-align:center;font-size:12px;color:var(--faint);lette
   function buildFilterChips() {
     const bans = [...new Set(allStudents.map(s => {
       const m = (s.className || '').match(/(\d+)반/);
-      return m ? m[1] + '반' : '기타';
+      return m ? m[1] + '반' : '교직원';
     }))].sort((a, b) => {
       const na = parseInt(a), nb = parseInt(b);
       return isNaN(na) || isNaN(nb) ? a.localeCompare(b) : na - nb;
@@ -315,7 +315,9 @@ footer{margin-top:3rem;text-align:center;font-size:12px;color:var(--faint);lette
   function renderStudents() {
     const filtered = activeFilter === '전체'
       ? allStudents
-      : allStudents.filter(s => (s.className || '').includes(activeFilter.replace('반','') + '반'));
+      : activeFilter === '교직원'
+        ? allStudents.filter(s => !/((\d+)반)/.test(s.className || ''))
+        : allStudents.filter(s => (s.className || '').includes(activeFilter.replace('반','') + '반'));
     $('statFiltered').textContent = filtered.length;
 
     if (!filtered.length) {
@@ -529,7 +531,8 @@ footer{margin-top:3rem;text-align:center;font-size:12px;color:var(--faint);lette
   ];
   function getBanColor(className) {
     const m = (className || '').match(/(\d+)반/);
-    const n = m ? parseInt(m[1]) - 1 : 0;
+    if (!m) return { bg:'#F0FAF4', fg:'#2BA25B' }; // 교직원 — 초록
+    const n = parseInt(m[1]) - 1;
     return BAN_PALETTE[n % BAN_PALETTE.length];
   }
 
