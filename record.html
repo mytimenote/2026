@@ -145,7 +145,8 @@ footer{margin-top:2.5rem;text-align:center;font-size:12px;color:var(--faint);let
     const GAS_URL = 'https://script.google.com/macros/s/AKfycbxCIUMBHvu0YU77z4ULqrZAez6bue3cWi7Fzyg5slz-FdIY05K1EclHCRDUdcBoxXbPuQ/exec';
     const MAX_SEC = 40;
     const params  = new URLSearchParams(location.search);
-    const SCHOOL  = decodeURIComponent(params.get('school') || '');
+    const SHORT_CODE = params.get('c') || '';  // 짧은 코드 (카톡 링크). 있으면 resolveCode로 학교 해석
+    let SCHOOL    = decodeURIComponent(params.get('school') || '');
     let SCHOOL_TOKEN = ''; // schoolLogin 성공 시 발급되는 학교 스코프 토큰
   </script>
 
@@ -390,7 +391,7 @@ footer{margin-top:2.5rem;text-align:center;font-size:12px;color:var(--faint);let
         const audio = el();
         audio.currentTime = 0;
         audio.play().catch(() => {});
-        ramp(0, 0.18, 1200); // 1.2초 페이드인, 녹음 목소리를 방해하지 않는 낮은 볼륨
+        ramp(0, 0.16, 1200); // 1.2초 페이드인, 녹음 목소리를 방해하지 않는 낮은 볼륨
       },
       stop() {
         const audio = el();
@@ -399,11 +400,8 @@ footer{margin-top:2.5rem;text-align:center;font-size:12px;color:var(--faint);let
     };
   })();
   const schoolNameEl = $('schoolName');
-  if (SCHOOL) {
-    schoolNameEl.textContent = SCHOOL;
-    $('pwScreen').style.display = 'block';
-  } else {
-    // 학교 식별이 없으면 녹음 불가 (QR로 접속해야 함)
+
+  function showNeedQr() {
     schoolNameEl.textContent='졸업앨범 녹음';
     schoolNameEl.classList.add('placeholder');
     $('pwScreen').style.display = 'none';
@@ -412,6 +410,26 @@ footer{margin-top:2.5rem;text-align:center;font-size:12px;color:var(--faint);let
       + '<div style="font-size:17px;font-weight:600;margin-bottom:8px;">QR 코드로 접속해 주세요</div>'
       + '<div style="font-size:14px;color:#888;line-height:1.6;">선생님께 받은 QR 코드 또는 녹음 링크를 통해<br>접속하셔야 녹음할 수 있어요.</div></div>';
   }
+  function showSchoolScreen() {
+    schoolNameEl.textContent = SCHOOL;
+    $('pwScreen').style.display = 'block';
+  }
+
+  async function initRecord() {
+    // 짧은 코드(c) 우선 해석
+    if (SHORT_CODE && !SCHOOL) {
+      try {
+        const r = await fetch(GAS_URL + '?action=resolveCode&c=' + encodeURIComponent(SHORT_CODE), { redirect:'follow' });
+        const d = await r.json();
+        if (d.ok && d.type === 'school' && d.school) {
+          SCHOOL = d.school;
+        }
+      } catch (e) {}
+    }
+    if (SCHOOL) showSchoolScreen();
+    else showNeedQr();
+  }
+  initRecord();
 
   function toggleGuide() {
     const content = document.getElementById('guideContent');

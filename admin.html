@@ -435,9 +435,7 @@ footer{margin-top:3rem;text-align:center;font-size:12px;color:var(--faint);lette
 
   const getGasUrl   = () => document.getElementById('gasUrl').value.trim();
   const getPagesUrl = () => document.getElementById('pagesUrl').value.trim().replace(/\/$/,'');
-  const makePlayUrl = s => getPagesUrl() + '/play.html?f=' + encodeURIComponent(s.fileId)
-    + '&t=' + encodeURIComponent(s.playToken || '')
-    + '&s=' + encodeURIComponent(document.getElementById('schoolSelect').value);
+  const makePlayUrl = s => getPagesUrl() + '/play.html?c=' + encodeURIComponent(s.studentCode || '');
 
   /* ── 학교 목록 ── */
   async function loadSchools() {
@@ -463,14 +461,7 @@ footer{margin-top:3rem;text-align:center;font-size:12px;color:var(--faint);lette
       const data = await apiGet({ action:'list', school: school });
       if (data.error === 'AUTH_REQUIRED'){ logout(); return; }
       students   = data.students || [];
-      // 각 학생의 play 토큰 발급 (QR URL에 내장) — 2·8번
-      document.getElementById('loadingRow').querySelector('span')?.replaceChildren?.();
-      await Promise.all(students.map(async s => {
-        try {
-          const t = await apiGet({ action:'playToken', school: school, f: s.fileId });
-          s.playToken = (t && t.ok) ? t.token : '';
-        } catch { s.playToken = ''; }
-      }));
+      // studentCode는 list 응답에 이미 포함됨 (QR URL에 사용)
       document.getElementById('loadingRow').style.display    = 'none';
       document.getElementById('resultSection').style.display = 'block';
       document.getElementById('statCount').textContent  = students.length + '명';
@@ -763,7 +754,9 @@ footer{margin-top:3rem;text-align:center;font-size:12px;color:var(--faint);lette
   /* ── 링크 공유 ── */
   function buildShareMsg(school) {
     const p = allPasswords.find(x => x.school === school) || {};
-    const recordUrl = getPagesUrl() + '/record.html?school=' + encodeURIComponent(school);
+    const recordUrl = p.schoolCode
+      ? getPagesUrl() + '/record.html?c=' + encodeURIComponent(p.schoolCode)
+      : getPagesUrl() + '/record.html?school=' + encodeURIComponent(school);
     let msg = `🎓 ${school} 졸업 음성 메시지 녹음 안내\n\n`;
     msg += `📎 녹음 링크\n${recordUrl}\n`;
     if (p.password) msg += `\n🔒 비밀번호: ${p.password}`;
