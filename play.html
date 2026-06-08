@@ -176,7 +176,7 @@ footer{margin-top:2.5rem;text-align:center;font-size:12px;color:var(--faint);let
    MP3 파일 기반 재생 · 저작권 없는 연주 녹음
 ════════════════════════════════════════════════ */
 const BGM = (() => {
-  const TARGET_VOL = 0.22; // 목소리가 메인이므로 BGM은 배경 수준 (~22%)
+  const TARGET_VOL = 0.30; // 목소리가 메인이므로 BGM은 배경 수준 (~30%)
   const BGM_SRC    = './bgm_salut.mp3?v=20260508';
 
   /* ══════════════════════════════════════════════
@@ -830,11 +830,11 @@ async function mixAndConvertToMp3(blob) {
   const bgmL   = bgmBuffer ? bgmBuffer.getChannelData(0) : empty;
   const bgmR   = bgmBuffer && bgmBuffer.numberOfChannels > 1 ? bgmBuffer.getChannelData(1) : bgmL;
 
-  /* 믹싱: 음성 100% + BGM 35% (클리핑 방지) */
+  /* 믹싱: 음성 100% + BGM 45% (클리핑 방지) */
   const len    = voiceBuffer.length;
   const mixedL = new Float32Array(len);
   const mixedR = new Float32Array(len);
-  const BGM_GAIN = .35;
+  const BGM_GAIN = .45;
   for (let i = 0; i < len; i++) {
     mixedL[i] = Math.max(-1, Math.min(1, voiceL[i] + (bgmL[i] || 0) * BGM_GAIN));
     mixedR[i] = Math.max(-1, Math.min(1, voiceR[i] + (bgmR[i] || 0) * BGM_GAIN));

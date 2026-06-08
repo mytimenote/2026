@@ -615,7 +615,11 @@ footer{margin-top:3rem;text-align:center;font-size:12px;color:var(--faint);lette
       <div class="pw-row" id="pwrow-${encSc}">
         <div class="pw-row-top">
           <span class="pw-school">🏫 ${schoolDisp}</span>
-          <span class="pw-value" id="pwval-${encSc}">${p.hasPassword?'🔒 설정됨':'⚠ 미설정'}</span>
+          <span class="pw-value" id="pwval-${encSc}">${
+            p.password
+              ? `<span class="pw-dot" id="pwdot-${encSc}">••••••</span><span class="pw-plain" id="pwplain-${encSc}" style="display:none">${esc(p.password)}</span> <span class="pw-eye" onclick="toggleSchoolPw('${encSc}')" style="cursor:pointer;user-select:none" title="비밀번호 보기/숨기기">👁</span>`
+              : (p.hasPassword ? '🔒 설정됨 (재저장 필요)' : '⚠ 미설정')
+          }</span>
         </div>
         <div class="pw-dates" id="pddates-${encSc}">${dateStr}</div>
         <div class="pw-actions">
@@ -746,13 +750,24 @@ footer{margin-top:3rem;text-align:center;font-size:12px;color:var(--faint);lette
     } catch(err) { showMsg('pwDelErr','오류: '+err.message); if(row) row.querySelector('.pw-del').disabled=false; }
   }
 
+  /* ── 학교 비밀번호 보기/숨기기 ── */
+  function toggleSchoolPw(encSc) {
+    const dot   = document.getElementById('pwdot-' + encSc);
+    const plain = document.getElementById('pwplain-' + encSc);
+    if (!dot || !plain) return;
+    const show = plain.style.display === 'none';
+    plain.style.display = show ? '' : 'none';
+    dot.style.display   = show ? 'none' : '';
+  }
+
   /* ── 링크 공유 ── */
   function buildShareMsg(school) {
     const p = allPasswords.find(x => x.school === school) || {};
     const recordUrl = getPagesUrl() + '/record.html?school=' + encodeURIComponent(school);
     let msg = `🎓 ${school} 졸업 음성 메시지 녹음 안내\n\n`;
     msg += `📎 녹음 링크\n${recordUrl}\n`;
-    if (p.hasPassword) msg += `\n🔒 비밀번호: (학교에 별도 전달한 비밀번호)`;
+    if (p.password) msg += `\n🔒 비밀번호: ${p.password}`;
+    else if (p.hasPassword) msg += `\n🔒 비밀번호: (학교에 별도 전달한 비밀번호)`;
     if (p.startDate || p.endDate) msg += `\n\n📅 녹음 기간\n${p.startDate||'?'} ~ ${p.endDate||'?'}`;
     return msg;
   }
@@ -839,13 +854,9 @@ footer{margin-top:3rem;text-align:center;font-size:12px;color:var(--faint);lette
       const data = await apiPost({ action:'registerSchool', school, password:newPw, startDate:start, endDate:end });
       if (data.error === 'AUTH_REQUIRED'){ logout(); return; }
       if (data.success) {
-        // 비번은 화면에 표시하지 않음 (평문 노출 차단)
-        const valEl = document.getElementById('pwval-' + encSc);
-        if (valEl) valEl.textContent = '🔒 설정됨';
-        const cached = allPasswords.find(p => p.school === school);
-        if (cached) cached.hasPassword = true;
         document.getElementById('pwch-' + encSc)?.classList.remove('open');
         showMsg('pwDelOk', '✓ ' + school + ' 비밀번호가 변경됐습니다.');
+        loadPasswords();  // 목록 새로고침 → 변경된 비번 즉시 표시
       } else {
         if (errEl) errEl.textContent = '변경 실패: ' + (data.error || '');
         if (btn) btn.disabled = false;
