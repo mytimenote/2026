@@ -170,6 +170,9 @@ footer{margin-top:3rem;text-align:center;font-size:12px;color:var(--faint);lette
     <button id="loginBtn" onclick="adminLogin()"
       style="width:100%;padding:12px;font-size:15px;font-weight:600;color:#fff;background:#111;border:none;border-radius:10px;cursor:pointer;">로그인</button>
     <div id="loginErr" style="color:#d33;font-size:13px;margin-top:12px;min-height:18px;white-space:pre-line;"></div>
+    <div style="font-size:11px;color:#aaa;margin-top:16px;text-align:left;word-break:break-all;line-height:1.4;">
+      요청 대상 서버 URL:<br><span id="loginGasInfo" style="color:#777;"></span>
+    </div>
   </div>
 </div>
 
@@ -352,8 +355,13 @@ footer{margin-top:3rem;text-align:center;font-size:12px;color:var(--faint);lette
   }
 
   window.onload = () => {
-    document.getElementById('gasUrl').value   = localStorage.getItem('gasUrl')   || DEFAULT_GAS;
+    // localStorage 에 저장된 옛날 URL 을 무시하고 항상 코드의 최신 URL 사용
+    localStorage.removeItem('gasUrl');
+    document.getElementById('gasUrl').value   = DEFAULT_GAS;
     document.getElementById('pagesUrl').value = localStorage.getItem('pagesUrl') || DEFAULT_PAGES;
+    // 로그인 게이트에 현재 요청이 가는 URL 을 표시
+    var u = document.getElementById('loginGasInfo');
+    if (u) u.textContent = DEFAULT_GAS;
     showLoginGate();   // 로그인 전까지 본문 잠금 (1번)
   };
 
