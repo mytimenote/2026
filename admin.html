@@ -410,8 +410,7 @@ footer{margin-top:3rem;text-align:center;font-size:12px;color:var(--faint);lette
       } else if (data.error === 'NOT_CONFIGURED'){
         errEl.textContent = '서버에 관리자 비밀번호가 설정되지 않았습니다. setAdminPassword 실행 필요.';
       } else {
-        errEl.textContent = '비밀번호가 틀렸습니다.' + (data.remain != null ? ` (남은 시도 ${data.remain}회)` : '')
-          + '\n[서버 응답] ' + JSON.stringify(data);
+        errEl.textContent = '비밀번호가 틀렸습니다.' + (data.remain != null ? ` (남은 시도 ${data.remain}회)` : '');
       }
     } catch(e){
       errEl.textContent = '로그인 중 오류가 발생했습니다. GAS URL을 확인하세요.';
