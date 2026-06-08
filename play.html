@@ -396,7 +396,10 @@ const BGM = (() => {
 /* ════════════════════════════════════ */
 
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbxCIUMBHvu0YU77z4ULqrZAez6bue3cWi7Fzyg5slz-FdIY05K1EclHCRDUdcBoxXbPuQ/exec';
-const fileId  = new URLSearchParams(location.search).get('f') || '';
+const _qp      = new URLSearchParams(location.search);
+const fileId   = _qp.get('f') || '';
+const playToken= _qp.get('t') || '';   // 서명된 재생 토큰 (admin이 QR에 포함)
+const playSchool = _qp.get('s') || ''; // 학교 (토큰 검증 대상)
 
 const overlay    = document.getElementById('overlay');
 const ovSchool   = document.getElementById('ovSchool');
@@ -424,7 +427,7 @@ let verifiedName='', verifiedSchool='', rawBlob=null, audioMime='audio/webm';
 let audioReady=false, userTouched=false, dlEnabled=true;
 
 /* ── 잘못된 URL ── */
-if (!fileId) {
+if (!fileId || !playToken || !playSchool) {
   ovLoading.style.display = 'none';
   ovSchool.textContent    = '잘못된 QR코드';
   ovStudent.textContent   = '올바른 QR코드를 스캔해 주세요';
@@ -469,9 +472,14 @@ async function loadAudio() {
     ovLoading.innerHTML = '<span class="ov-spin"></span>음성 정보 확인 중…';
 
     const res  = await fetchWithTimeout(
-      GAS_URL + '?action=audio&f=' + encodeURIComponent(fileId), 30000
+      GAS_URL + '?action=play'
+        + '&f=' + encodeURIComponent(fileId)
+        + '&t=' + encodeURIComponent(playToken)
+        + '&s=' + encodeURIComponent(playSchool), 30000
     );
     const data = await res.json();
+    if (data && data.error === 'AUTH_REQUIRED')
+      throw new Error('재생 링크가 만료되었거나 올바르지 않습니다');
     if (!data || !data.ok)
       throw new Error((data && data.error) || '파일 정보를 불러올 수 없습니다');
 

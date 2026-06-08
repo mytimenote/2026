@@ -158,10 +158,26 @@ footer{margin-top:3rem;text-align:center;font-size:12px;color:var(--faint);lette
 </style>
 </head>
 <body>
+
+<!-- ── 로그인 게이트 (1번) ── -->
+<div id="loginGate" style="display:none;position:fixed;inset:0;z-index:9999;background:#f5f5f7;align-items:center;justify-content:center;">
+  <div style="width:100%;max-width:340px;padding:32px 24px;background:#fff;border-radius:16px;box-shadow:0 8px 32px rgba(0,0,0,.12);text-align:center;">
+    <div style="font-size:20px;font-weight:700;margin-bottom:6px;">관리자 로그인</div>
+    <div style="font-size:13px;color:#888;margin-bottom:20px;">관리자 비밀번호를 입력하세요</div>
+    <input id="adminPw" type="password" placeholder="비밀번호" autocomplete="off"
+      onkeydown="if(event.key==='Enter')adminLogin()"
+      style="width:100%;padding:12px 14px;font-size:15px;border:1px solid #ddd;border-radius:10px;box-sizing:border-box;margin-bottom:12px;" />
+    <button id="loginBtn" onclick="adminLogin()"
+      style="width:100%;padding:12px;font-size:15px;font-weight:600;color:#fff;background:#111;border:none;border-radius:10px;cursor:pointer;">로그인</button>
+    <div id="loginErr" style="color:#d33;font-size:13px;margin-top:12px;min-height:18px;white-space:pre-line;"></div>
+  </div>
+</div>
+
+<div id="appBody" style="display:none;">
 <div class="page">
   <div class="top-header">
     <div class="page-title">관리자</div>
-    <div class="page-desc">QR 생성 · 비밀번호 · 기간 관리</div>
+    <div class="page-desc">QR 생성 · 비밀번호 · 기간 관리 &nbsp;·&nbsp; <a href="#" onclick="logout();return false;" style="font-size:12px;color:#888;">로그아웃</a></div>
   </div>
 
   <div class="tabs">
@@ -304,12 +320,83 @@ footer{margin-top:3rem;text-align:center;font-size:12px;color:var(--faint);lette
   const DEFAULT_GAS   = 'https://script.google.com/macros/s/AKfycbxCIUMBHvu0YU77z4ULqrZAez6bue3cWi7Fzyg5slz-FdIY05K1EclHCRDUdcBoxXbPuQ/exec';
   const DEFAULT_PAGES = 'https://mytimenote.github.io/2026';
 
+  /* ── 관리자 토큰 (메모리에만 보관; localStorage 저장 금지) ── */
+  let ADMIN_TOKEN = '';
+
+  /* ── XSS 이스케이프 헬퍼 (9번) ── */
+  function esc(s){
+    return String(s == null ? '' : s)
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+      .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  }
+  /* 따옴표 안전 인라인 핸들러용 (onclick 등 JS 문자열 컨텍스트) */
+  function escJs(s){
+    return String(s == null ? '' : s).replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/"/g,'\\"');
+  }
+
+  /* ── 공통 API 래퍼: 모든 관리자 요청에 토큰 자동 첨부 ── */
+  async function apiGet(params){
+    const url = getGasUrl() + '?' + new URLSearchParams(
+      Object.assign({ token: ADMIN_TOKEN }, params)).toString();
+    const res = await fetch(url);
+    return res.json();
+  }
+  async function apiPost(payload){
+    const res = await fetch(getGasUrl(), {
+      method:'POST',
+      headers:{'Content-Type':'text/plain;charset=utf-8'},
+      body: JSON.stringify(Object.assign({ token: ADMIN_TOKEN }, payload)),
+      redirect:'follow'
+    });
+    return res.json();
+  }
+
   window.onload = () => {
     document.getElementById('gasUrl').value   = localStorage.getItem('gasUrl')   || DEFAULT_GAS;
     document.getElementById('pagesUrl').value = localStorage.getItem('pagesUrl') || DEFAULT_PAGES;
+    showLoginGate();   // 로그인 전까지 본문 잠금 (1번)
+  };
+
+  /* ── 로그인 게이트 (1번) ── */
+  function showLoginGate(){
+    document.getElementById('loginGate').style.display = 'flex';
+    document.getElementById('appBody').style.display = 'none';
+  }
+  function hideLoginGate(){
+    document.getElementById('loginGate').style.display = 'none';
+    document.getElementById('appBody').style.display = 'block';
     loadSchools();
     loadPasswords();
-  };
+  }
+  async function adminLogin(){
+    const pw = (document.getElementById('adminPw').value || '').trim();
+    const errEl = document.getElementById('loginErr');
+    const btn = document.getElementById('loginBtn');
+    if (!pw){ errEl.textContent = '비밀번호를 입력하세요.'; return; }
+    btn.disabled = true;
+    try {
+      const res = await fetch(getGasUrl(), {
+        method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'},
+        body: JSON.stringify({ action:'adminLogin', password: pw }), redirect:'follow'
+      });
+      const data = await res.json();
+      if (data.success && data.token){
+        ADMIN_TOKEN = data.token;
+        document.getElementById('adminPw').value = '';
+        errEl.textContent = '';
+        hideLoginGate();
+      } else if (data.error === 'LOCKED'){
+        errEl.textContent = data.message || '시도가 많아 잠시 잠겼습니다.';
+      } else if (data.error === 'NOT_CONFIGURED'){
+        errEl.textContent = '서버에 관리자 비밀번호가 설정되지 않았습니다. setAdminPassword 실행 필요.';
+      } else {
+        errEl.textContent = '비밀번호가 틀렸습니다.' + (data.remain != null ? ` (남은 시도 ${data.remain}회)` : '');
+      }
+    } catch(e){
+      errEl.textContent = '로그인 중 오류가 발생했습니다. GAS URL을 확인하세요.';
+    } finally { btn.disabled = false; }
+  }
+  function logout(){ ADMIN_TOKEN=''; showLoginGate(); }
 
   function switchTab(name) {
     ['qr','pw','settings'].forEach((n,i) => {
@@ -328,16 +415,19 @@ footer{margin-top:3rem;text-align:center;font-size:12px;color:var(--faint);lette
 
   const getGasUrl   = () => document.getElementById('gasUrl').value.trim();
   const getPagesUrl = () => document.getElementById('pagesUrl').value.trim().replace(/\/$/,'');
-  const makePlayUrl = s => getPagesUrl() + '/play.html?f=' + encodeURIComponent(s.fileId);
+  const makePlayUrl = s => getPagesUrl() + '/play.html?f=' + encodeURIComponent(s.fileId)
+    + '&t=' + encodeURIComponent(s.playToken || '')
+    + '&s=' + encodeURIComponent(document.getElementById('schoolSelect').value);
 
   /* ── 학교 목록 ── */
   async function loadSchools() {
     try {
-      const res  = await fetch(getGasUrl() + '?action=schools');
-      const data = await res.json();
+      const data = await apiGet({ action:'schoolList' });
+      if (data.error === 'AUTH_REQUIRED'){ logout(); return; }
       const sel  = document.getElementById('schoolSelect');
+      const names = (data.schools || []).map(s => s.school);
       sel.innerHTML = '<option value="">— 학교를 선택하세요 —</option>' +
-        (data.schools || []).map(s => `<option value="${s}">${s}</option>`).join('');
+        names.map(s => `<option value="${esc(s)}">${esc(s)}</option>`).join('');
       document.getElementById('settingsErr').style.display = 'none';
       showMsg('settingsOk','✓ 연결 성공');
     } catch { showMsg('settingsErr','연결 실패 — GAS URL을 확인하세요.'); }
@@ -350,9 +440,17 @@ footer{margin-top:3rem;text-align:center;font-size:12px;color:var(--faint);lette
     document.getElementById('loadingRow').style.display    = 'flex';
     document.getElementById('resultSection').style.display = 'none';
     try {
-      const res  = await fetch(getGasUrl() + '?action=list&school=' + encodeURIComponent(school));
-      const data = await res.json();
+      const data = await apiGet({ action:'list', school: school });
+      if (data.error === 'AUTH_REQUIRED'){ logout(); return; }
       students   = data.students || [];
+      // 각 학생의 play 토큰 발급 (QR URL에 내장) — 2·8번
+      document.getElementById('loadingRow').querySelector('span')?.replaceChildren?.();
+      await Promise.all(students.map(async s => {
+        try {
+          const t = await apiGet({ action:'playToken', school: school, f: s.fileId });
+          s.playToken = (t && t.ok) ? t.token : '';
+        } catch { s.playToken = ''; }
+      }));
       document.getElementById('loadingRow').style.display    = 'none';
       document.getElementById('resultSection').style.display = 'block';
       document.getElementById('statCount').textContent  = students.length + '명';
@@ -390,11 +488,9 @@ footer{margin-top:3rem;text-align:center;font-size:12px;color:var(--faint);lette
     const btn = document.getElementById('qdel-'+idx);
     btn.disabled = true; btn.textContent = '삭제 중…';
     try {
-      const res  = await fetch(getGasUrl(), {
-        method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'},
-        body: JSON.stringify({ action:'deleteRecording', fileId }), redirect:'follow'
-      });
-      const data = await res.json();
+      const school = document.getElementById('schoolSelect').value;
+      const data = await apiPost({ action:'deleteRecording', school, fileId });
+      if (data.error === 'AUTH_REQUIRED'){ logout(); return; }
       if (data.success) {
         document.getElementById('qc-'+idx).remove();
         students = students.filter((_,i) => i !== idx);
@@ -439,9 +535,9 @@ footer{margin-top:3rem;text-align:center;font-size:12px;color:var(--faint);lette
 
   async function loadPasswords() {
     try {
-      const res  = await fetch(getGasUrl() + '?action=getPasswords');
-      const data = await res.json();
-      allPasswords = data.passwords || [];
+      const data = await apiGet({ action:'schoolList' });
+      if (data.error === 'AUTH_REQUIRED'){ logout(); return; }
+      allPasswords = data.schools || [];
       const q = document.getElementById('pwSearchInput')?.value || '';
       renderPasswords(q);
       renderBulkList();
@@ -489,7 +585,8 @@ footer{margin-top:3rem;text-align:center;font-size:12px;color:var(--faint);lette
     list.innerHTML = filtered.map(p => {
       const dlOn   = p.downloadEnabled !== false;
       const encSc  = encodeURIComponent(p.school);
-      const safeSc = p.school.replace(/'/g,"\\'");
+      const safeSc = escJs(p.school);
+      const schoolDisp = esc(p.school);
       const badge  = getPeriodBadge(p.startDate, p.endDate);
       const dateStr = (p.startDate || p.endDate)
         ? `<span>${fmtDate(p.startDate)}~${fmtDate(p.endDate)}</span> ${badge}`
@@ -497,8 +594,8 @@ footer{margin-top:3rem;text-align:center;font-size:12px;color:var(--faint);lette
       return `
       <div class="pw-row" id="pwrow-${encSc}">
         <div class="pw-row-top">
-          <span class="pw-school">🏫 ${p.school}</span>
-          <span class="pw-value" id="pwval-${encSc}">🔒 ${p.password}</span>
+          <span class="pw-school">🏫 ${schoolDisp}</span>
+          <span class="pw-value" id="pwval-${encSc}">${p.hasPassword?'🔒 설정됨':'⚠ 미설정'}</span>
         </div>
         <div class="pw-dates" id="pddates-${encSc}">${dateStr}</div>
         <div class="pw-actions">
@@ -587,16 +684,13 @@ footer{margin-top:3rem;text-align:center;font-size:12px;color:var(--faint);lette
     if (!school || !pw) { showMsg('pwErr','학교명과 비밀번호를 입력하세요.'); return; }
     if (start && end && start > end) { showMsg('pwErr','종료일이 시작일보다 빠릅니다.'); return; }
     try {
-      const res  = await fetch(getGasUrl(), {
-        method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'},
-        body: JSON.stringify({ action:'setPassword', school, password:pw, startDate:start, endDate:end }),
-        redirect:'follow'
-      });
-      const data = await res.json();
+      const data = await apiPost({ action:'registerSchool', school, password:pw, startDate:start, endDate:end });
+      if (data.error === 'AUTH_REQUIRED'){ logout(); return; }
       if (data.success) {
         showMsg('pwOk','✓ 저장됐습니다.');
         clearPwForm();
         loadPasswords();
+        loadSchools();
       } else throw new Error(data.error);
     } catch(err) { showMsg('pwErr','저장 실패: ' + err.message); }
   }
@@ -612,28 +706,22 @@ footer{margin-top:3rem;text-align:center;font-size:12px;color:var(--faint);lette
     const btn   = document.getElementById('dltog-' + encSc);
     if (btn) btn.disabled = true;
     try {
-      const res  = await fetch(getGasUrl(), {
-        method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'},
-        body: JSON.stringify({ action:'setDownloadEnabled', school, enabled:newState }), redirect:'follow'
-      });
-      const data = await res.json();
+      const data = await apiPost({ action:'setDownloadEnabled', school, enabled:newState });
+      if (data.error === 'AUTH_REQUIRED'){ logout(); return; }
       if (data.success) { showMsg('pwDelOk',`✓ ${school} 다운로드 ${newState?'허용':'차단'}으로 변경됐습니다.`); loadPasswords(); }
       else { showMsg('pwDelErr','변경 실패: ' + (data.error||'')); if(btn) btn.disabled=false; }
     } catch(err) { showMsg('pwDelErr','오류: ' + err.message); if(btn) btn.disabled=false; }
   }
 
   async function deletePassword(school) {
-    if (!confirm(school + ' 설정을 삭제할까요?')) return;
+    if (!confirm(school + ' 학교를 삭제할까요?\n\n등록 정보가 제거됩니다. (녹음 파일 보존)')) return;
     const encSc = encodeURIComponent(school);
     const row   = document.getElementById('pwrow-' + encSc);
     if (row) row.querySelector('.pw-del').disabled = true;
     try {
-      const res  = await fetch(getGasUrl(), {
-        method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'},
-        body: JSON.stringify({ action:'deletePassword', school }), redirect:'follow'
-      });
-      const data = await res.json();
-      if (data.success) { showMsg('pwDelOk','✓ 삭제됐습니다.'); loadPasswords(); }
+      const data = await apiPost({ action:'deleteSchool', school, purgeFiles:false });
+      if (data.error === 'AUTH_REQUIRED'){ logout(); return; }
+      if (data.success) { showMsg('pwDelOk','✓ 삭제됐습니다.'); loadPasswords(); loadSchools(); }
       else { showMsg('pwDelErr','삭제 실패: '+(data.error||'')); if(row) row.querySelector('.pw-del').disabled=false; }
     } catch(err) { showMsg('pwDelErr','오류: '+err.message); if(row) row.querySelector('.pw-del').disabled=false; }
   }
@@ -644,7 +732,7 @@ footer{margin-top:3rem;text-align:center;font-size:12px;color:var(--faint);lette
     const recordUrl = getPagesUrl() + '/record.html?school=' + encodeURIComponent(school);
     let msg = `🎓 ${school} 졸업 음성 메시지 녹음 안내\n\n`;
     msg += `📎 녹음 링크\n${recordUrl}\n`;
-    if (p.password) msg += `\n🔒 비밀번호: ${p.password}`;
+    if (p.hasPassword) msg += `\n🔒 비밀번호: (학교에 별도 전달한 비밀번호)`;
     if (p.startDate || p.endDate) msg += `\n\n📅 녹음 기간\n${p.startDate||'?'} ~ ${p.endDate||'?'}`;
     return msg;
   }
@@ -681,15 +769,9 @@ footer{margin-top:3rem;text-align:center;font-size:12px;color:var(--faint);lette
     const btn = document.getElementById('ppsave-' + encSc);
     if (btn) btn.disabled = true;
     try {
-      // 비밀번호는 현재 표시된 값 재사용
-      const row = document.getElementById('pwrow-' + encSc);
-      const pw  = row?.querySelector('.pw-value')?.textContent.replace('🔒 ','').trim() || '';
-      const res  = await fetch(getGasUrl(), {
-        method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'},
-        body: JSON.stringify({ action:'setPassword', school, password:pw, startDate:start, endDate:end }),
-        redirect:'follow'
-      });
-      const data = await res.json();
+      // 비밀번호는 보내지 않음 → 백엔드가 기존 비번 유지 (기간만 갱신)
+      const data = await apiPost({ action:'registerSchool', school, password:'', startDate:start, endDate:end });
+      if (data.error === 'AUTH_REQUIRED'){ logout(); return; }
       if (data.success) {
         showMsg('pwDelOk', '✓ ' + school + ' 기간이 저장됐습니다.');
         document.getElementById('pp-' + encSc)?.classList.remove('open');
@@ -734,19 +816,14 @@ footer{margin-top:3rem;text-align:center;font-size:12px;color:var(--faint);lette
       const row   = document.getElementById('pwrow-' + encSc);
       const start = row?.querySelector('[id^="ppstart-"]')?.value || '';
       const end   = row?.querySelector('[id^="ppend-"]')?.value   || '';
-      const res  = await fetch(getGasUrl(), {
-        method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'},
-        body: JSON.stringify({ action:'setPassword', school, password:newPw, startDate:start, endDate:end }),
-        redirect:'follow'
-      });
-      const data = await res.json();
+      const data = await apiPost({ action:'registerSchool', school, password:newPw, startDate:start, endDate:end });
+      if (data.error === 'AUTH_REQUIRED'){ logout(); return; }
       if (data.success) {
-        // 화면 즉시 업데이트 (새로고침 없이)
+        // 비번은 화면에 표시하지 않음 (평문 노출 차단)
         const valEl = document.getElementById('pwval-' + encSc);
-        if (valEl) valEl.textContent = '🔒 ' + newPw;
-        // allPasswords 캐시도 업데이트
+        if (valEl) valEl.textContent = '🔒 설정됨';
         const cached = allPasswords.find(p => p.school === school);
-        if (cached) cached.password = newPw;
+        if (cached) cached.hasPassword = true;
         document.getElementById('pwch-' + encSc)?.classList.remove('open');
         showMsg('pwDelOk', '✓ ' + school + ' 비밀번호가 변경됐습니다.');
       } else {
@@ -800,11 +877,8 @@ footer{margin-top:3rem;text-align:center;font-size:12px;color:var(--faint);lette
     let ok = 0, fail = 0;
     for (const school of checked) {
       try {
-        const res  = await fetch(getGasUrl(), {
-          method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'},
-          body: JSON.stringify({ action:'deleteSchool', school }), redirect:'follow'
-        });
-        const data = await res.json();
+        const data = await apiPost({ action:'deleteSchool', school, purgeFiles:false });
+        if (data.error === 'AUTH_REQUIRED'){ logout(); return; }
         data.success ? ok++ : fail++;
       } catch { fail++; }
     }
@@ -821,5 +895,6 @@ footer{margin-top:3rem;text-align:center;font-size:12px;color:var(--faint);lette
     setTimeout(() => { el.style.display='none'; }, 4000);
   }
 </script>
+</div><!-- /#appBody -->
 </body>
 </html>

@@ -146,6 +146,7 @@ footer{margin-top:2.5rem;text-align:center;font-size:12px;color:var(--faint);let
     const MAX_SEC = 40;
     const params  = new URLSearchParams(location.search);
     const SCHOOL  = decodeURIComponent(params.get('school') || '');
+    let SCHOOL_TOKEN = ''; // schoolLogin 성공 시 발급되는 학교 스코프 토큰
   </script>
 
   <div class="top-header">
@@ -398,10 +399,19 @@ footer{margin-top:2.5rem;text-align:center;font-size:12px;color:var(--faint);let
     };
   })();
   const schoolNameEl = $('schoolName');
-  if (SCHOOL) { schoolNameEl.textContent = SCHOOL; }
-  else { schoolNameEl.textContent='졸업앨범 녹음'; schoolNameEl.classList.add('placeholder'); $('schoolCard').style.display='block'; }
-
-  $('pwScreen').style.display = 'block';
+  if (SCHOOL) {
+    schoolNameEl.textContent = SCHOOL;
+    $('pwScreen').style.display = 'block';
+  } else {
+    // 학교 식별이 없으면 녹음 불가 (QR로 접속해야 함)
+    schoolNameEl.textContent='졸업앨범 녹음';
+    schoolNameEl.classList.add('placeholder');
+    $('pwScreen').style.display = 'none';
+    document.body.innerHTML = '<div style="max-width:400px;margin:80px auto;padding:32px;text-align:center;font-family:sans-serif;color:#444;">'
+      + '<div style="font-size:40px;margin-bottom:16px;">📷</div>'
+      + '<div style="font-size:17px;font-weight:600;margin-bottom:8px;">QR 코드로 접속해 주세요</div>'
+      + '<div style="font-size:14px;color:#888;line-height:1.6;">선생님께 받은 QR 코드 또는 녹음 링크를 통해<br>접속하셔야 녹음할 수 있어요.</div></div>';
+  }
 
   function toggleGuide() {
     const content = document.getElementById('guideContent');
@@ -422,13 +432,19 @@ footer{margin-top:2.5rem;text-align:center;font-size:12px;color:var(--faint);let
     const pw=($('pwInput').value||'').trim();
     const btn=$('pwBtn');
     if (!pw) { showPwError('비밀번호를 입력해 주세요.'); return; }
-    if (!SCHOOL) { enterRecordScreen(); return; }
+    if (!SCHOOL) { showPwError('녹음 링크가 올바르지 않습니다. 선생님께 문의해 주세요.'); return; }
     btn.disabled=true; btn.classList.add('loading');
     try {
-      const res  = await fetch(GAS_URL+'?action=checkPassword&school='+encodeURIComponent(SCHOOL)+'&pw='+encodeURIComponent(pw));
+      const res  = await fetch(GAS_URL, {
+        method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'},
+        body: JSON.stringify({ action:'schoolLogin', school:SCHOOL, password:pw }), redirect:'follow'
+      });
       const data = await res.json();
-      if (data.ok) enterRecordScreen();
-      else showPwError(data.error || '비밀번호가 틀렸습니다. 선생님께 확인해 주세요.');
+      if (data.success && data.token) { SCHOOL_TOKEN = data.token; enterRecordScreen(); }
+      else if (data.error === 'LOCKED')  showPwError(data.message || '시도가 많아 잠시 잠겼습니다.');
+      else if (data.error === 'PERIOD')  showPwError(data.message || '녹음 기간이 아닙니다.');
+      else if (data.error === 'NO_SCHOOL') showPwError('등록되지 않은 학교입니다. 선생님께 문의해 주세요.');
+      else showPwError('비밀번호가 틀렸습니다. 선생님께 확인해 주세요.' + (data.remain!=null?` (남은 시도 ${data.remain}회)`:''));
     } catch { showPwError('확인 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.'); }
     finally { btn.disabled=false; btn.classList.remove('loading'); }
   }
@@ -529,10 +545,11 @@ footer{margin-top:2.5rem;text-align:center;font-size:12px;color:var(--faint);let
   }
 
   async function save(){
-    const school=SCHOOL||$('inputSchool').value.trim();
+    const school=SCHOOL;
     const name=$('inputName').value.trim();
     const className=getClassName();
-    if(!school)return showErr('학교 이름을 입력해 주세요.');
+    if(!SCHOOL_TOKEN)return showErr('인증이 필요합니다. 비밀번호를 다시 입력해 주세요.');
+    if(!school)return showErr('학교 정보가 없습니다. QR로 다시 접속해 주세요.');
     if(!name)return showErr('이름을 입력해 주세요.');
     if(!className)return showErr(getPersonType()==='teacher'?'직책을 선택해 주세요.':'반과 번호를 선택해 주세요.');
     if(!blob)return showErr('먼저 녹음을 완료해 주세요.');
@@ -540,12 +557,16 @@ footer{margin-top:2.5rem;text-align:center;font-size:12px;color:var(--faint);let
     $('listenBtn').disabled=true;$('saveBtn').disabled=true;$('retryBtn').disabled=true;
     try{
       const base64=await toBase64(blob);
-      const data = await uploadWithRetry({school,name,className,audioBase64:base64,mimeType});
+      const data = await uploadWithRetry({action:'upload',token:SCHOOL_TOKEN,name,className,audioBase64:base64,mimeType});
       $('alertLoad').style.display='none';
       if(data.success){
         $('formWrap').style.display='none';$('doneTitle').textContent=name+'님의 목소리가 담겼어요';$('done').style.display='block';
       }else if(data.error==='ALREADY_SUBMITTED'){
         $('formWrap').style.display='none';$('submittedWrap').style.display='block';
+      }else if(data.error==='AUTH_REQUIRED'){
+        $('listenBtn').disabled=false;$('saveBtn').disabled=false;$('retryBtn').disabled=false;
+        $('formWrap').style.display='none';$('pwScreen').style.display='block';
+        showPwError('인증이 만료됐어요. 비밀번호를 다시 입력해 주세요.');
       }else throw new Error(data.error||'업로드 실패');
     }catch(err){
       $('alertLoad').style.display='none';

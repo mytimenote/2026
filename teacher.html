@@ -206,10 +206,21 @@ footer{margin-top:3rem;text-align:center;font-size:12px;color:var(--faint);lette
   const $ = id => document.getElementById(id);
 
   let currentSchool  = '';
+  let SCHOOL_TOKEN   = ''; // schoolLogin 성공 시 발급
   let allStudents    = [];
   let activeFilter   = '전체';
   let currentAudio   = null; // 현재 재생 중인 <audio>
   let currentRow     = null; // 현재 열린 s-row
+
+  /* XSS 이스케이프 (9번) */
+  function esc(s){
+    return String(s == null ? '' : s)
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+      .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  }
+  function escJs(s){
+    return String(s == null ? '' : s).replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/"/g,'\\"');
+  }
 
   /* ── 로그인 ── */
   function toggleEye() {
@@ -237,16 +248,26 @@ footer{margin-top:3rem;text-align:center;font-size:12px;color:var(--faint);lette
     const btn = $('loginBtn');
     btn.disabled = true; btn.classList.add('loading');
     try {
-      const res  = await fetch(GAS_URL + '?action=checkPassword&school=' + encodeURIComponent(school) + '&pw=' + encodeURIComponent(pw));
+      const res  = await fetch(GAS_URL, {
+        method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'},
+        body: JSON.stringify({ action:'schoolLogin', school, password:pw }), redirect:'follow'
+      });
       const data = await res.json();
-      if (data.ok) {
+      if (data.success && data.token) {
+        SCHOOL_TOKEN  = data.token;
         currentSchool = school;
         $('loginWrap').style.display = 'none';
         $('dash').style.display = 'block';
         $('dashSchool').textContent = school;
         loadStudents();
+      } else if (data.error === 'LOCKED') {
+        showErr(data.message || '시도가 많아 잠시 잠겼습니다.');
+      } else if (data.error === 'PERIOD') {
+        showErr(data.message || '열람 기간이 아닙니다.');
+      } else if (data.error === 'NO_SCHOOL') {
+        showErr('등록되지 않은 학교입니다.');
       } else {
-        showErr(data.error || '비밀번호가 틀렸습니다. 선생님 비밀번호를 확인해 주세요.');
+        showErr('비밀번호가 틀렸습니다.' + (data.remain!=null?` (남은 시도 ${data.remain}회)`:''));
       }
     } catch {
       showErr('확인 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.');
@@ -260,8 +281,15 @@ footer{margin-top:3rem;text-align:center;font-size:12px;color:var(--faint);lette
     $('loadRow').style.display  = 'flex';
     $('studentList').innerHTML  = '';
     try {
-      const res  = await fetch(GAS_URL + '?action=list&school=' + encodeURIComponent(currentSchool));
+      const res  = await fetch(GAS_URL + '?action=list&school=' + encodeURIComponent(currentSchool) + '&token=' + encodeURIComponent(SCHOOL_TOKEN));
       const data = await res.json();
+      if (data.error === 'AUTH_REQUIRED') {
+        $('loadRow').style.display = 'none';
+        $('dash').style.display = 'none';
+        $('loginWrap').style.display = 'block';
+        showErr('인증이 만료됐습니다. 다시 로그인해 주세요.');
+        return;
+      }
       allStudents = (data.students || []).sort((a, b) => {
         // 반번호 순 정렬
         const [aB, aNum] = parseCls(a.className);
@@ -325,17 +353,18 @@ footer{margin-top:3rem;text-align:center;font-size:12px;color:var(--faint);lette
       return;
     }
     $('studentList').innerHTML = filtered.map((s, i) => {
-      const initials  = (s.name || '?')[0];
+      const initials  = esc((s.name || '?')[0]);
       const banColor  = getBanColor(s.className);
-      const dateStr  = formatDate(s.timestamp);
+      const dateStr  = esc(formatDate(s.timestamp));
       const safeId   = 'row-' + encodeURIComponent(s.fileId);
+      const fidJs    = escJs(s.fileId);
       return `
       <div class="s-row" id="${safeId}">
-        <div class="s-top" onclick="toggleRow('${s.fileId}')">
+        <div class="s-top" onclick="toggleRow('${fidJs}')">
           <div class="s-avatar" style="background:${banColor.bg};color:${banColor.fg}">${initials}</div>
           <div class="s-info">
-            <div class="s-name">${s.name}</div>
-            <div class="s-cls">${s.className}</div>
+            <div class="s-name">${esc(s.name)}</div>
+            <div class="s-cls">${esc(s.className)}</div>
           </div>
           <div class="s-date">${dateStr}</div>
           <div class="s-arrow">▾</div>
@@ -433,8 +462,11 @@ footer{margin-top:3rem;text-align:center;font-size:12px;color:var(--faint);lette
     $('pc-' + fileId).style.display = 'none';
     try {
       // action=audio 에서 b64 직접 수신 → Blob URL 변환
-      const res  = await fetch(GAS_URL + '?action=audio&f=' + encodeURIComponent(fileId));
+      const res  = await fetch(GAS_URL + '?action=audio&f=' + encodeURIComponent(fileId)
+                   + '&school=' + encodeURIComponent(currentSchool)
+                   + '&token=' + encodeURIComponent(SCHOOL_TOKEN));
       const data = await res.json();
+      if (data.error === 'AUTH_REQUIRED') throw new Error('인증이 만료됐습니다. 다시 로그인해 주세요.');
       if (!data.ok) throw new Error(data.error || '로드 실패');
 
       const mime   = data.mime || 'audio/webm';

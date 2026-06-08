@@ -1,330 +1,835 @@
 // ============================================================
-//  졸업앨범 음성 녹음 서버
-//  시트1 'recordings': timestamp | school | name | class | fileName | fileId | mimeType
-//  시트2 'passwords' : school | password | downloadEnabled | startDate | endDate
+//  졸업앨범 음성 녹음 서버 — [재설계 0단계: 토대]
+//  ------------------------------------------------------------
+//  구조 개요
+//   · registry (마스터 시트, 단일):
+//       school | ssId | folderId | pwHash | pwSalt |
+//       downloadEnabled | startDate | endDate |
+//       gradYear | retainUntil | createdAt
+//     → 학교명으로 "그 학교의 스프레드시트ID/폴더ID/비번해시"만 조회
+//   · 학교별 스프레드시트 (학교당 1개, 자동 생성):
+//       시트 'recordings': timestamp | name | class | fileName | fileId | mimeType
+//     → 어떤 요청이 와도 해당 학교 시트 하나만 읽음 (4번 해결)
+//
+//  이 0단계 파일은 "토대 함수"만 정의합니다.
+//  doGet/doPost 연결과 기존 로직 이식은 1단계 이후 진행합니다.
 // ============================================================
 
-var SPREADSHEET_ID   = '14nc7vEO8aYd146HQJyT3D0TEkqU_tC0c9i0hO6VDwkQ';
+// ------------------------------------------------------------
+//  설정값
+// ------------------------------------------------------------
+var REGISTRY_SS_ID  = '';            // ← registry 마스터 스프레드시트 ID (initSetup 실행 후 채움)
+var REGISTRY_SHEET  = 'registry';
+var SCHOOL_REC_SHEET = 'recordings'; // 학교별 스프레드시트 안의 시트 이름
 var ROOT_FOLDER_NAME = '졸업앨범_음성';
-var SHEET_NAME       = 'recordings';
-var PW_SHEET_NAME    = 'passwords';
 
+// Script Properties 키 이름 (값은 코드에 하드코딩하지 않음)
+var PROP_HMAC_KEY    = 'HMAC_SECRET';   // 토큰 서명용 비밀키
+var PROP_ADMIN_HASH  = 'ADMIN_PW_HASH'; // 관리자 비번 해시
+var PROP_ADMIN_SALT  = 'ADMIN_PW_SALT'; // 관리자 비번 salt
+var PROP_REGISTRY_ID = 'REGISTRY_SS_ID';// registry 스프레드시트 ID
+
+// 토큰 유효시간 (분)
+var TOKEN_TTL_ADMIN  = 120;  // 관리자 2시간
+var TOKEN_TTL_SCHOOL = 180;  // 학교(교사) 3시간
+
+// ============================================================
+//  [A] 최초 1회 설정 — 에디터에서 수동 실행
+// ============================================================
+//  initSetup() 을 한 번 실행하면:
+//   1) registry 스프레드시트 생성 → ID를 Script Properties에 저장
+//   2) HMAC 비밀키 생성 → 저장
+//  실행 후 로그에 출력되는 REGISTRY_SS_ID 값을 위 REGISTRY_SS_ID 변수에도 붙여넣으세요.
 // ------------------------------------------------------------
-//  POST
-// ------------------------------------------------------------
-function doPost(e) {
+function initSetup() {
+  var props = PropertiesService.getScriptProperties();
+
+  // 1) registry 스프레드시트 생성 (이미 있으면 재사용)
+  var regId = props.getProperty(PROP_REGISTRY_ID);
+  if (!regId) {
+    var ss = SpreadsheetApp.create('졸업앨범_registry');
+    var sh = ss.getSheets()[0];
+    sh.setName(REGISTRY_SHEET);
+    sh.appendRow([
+      'school','ssId','folderId','pwHash','pwSalt',
+      'downloadEnabled','startDate','endDate',
+      'gradYear','retainUntil','createdAt'
+    ]);
+    sh.setFrozenRows(1);
+    regId = ss.getId();
+    props.setProperty(PROP_REGISTRY_ID, regId);
+  }
+
+  // 2) HMAC 비밀키 생성 (없을 때만)
+  if (!props.getProperty(PROP_HMAC_KEY)) {
+    props.setProperty(PROP_HMAC_KEY, _randomToken(48));
+  }
+
+  Logger.log('[initSetup 완료]');
+  Logger.log('REGISTRY_SS_ID = ' + regId);
+  Logger.log('→ 위 값을 코드 상단 REGISTRY_SS_ID 변수에 붙여넣으세요.');
+  Logger.log('관리자 비밀번호는 setAdminPassword("원하는비번") 를 따로 실행해 설정하세요.');
+}
+
+// 관리자 비밀번호 설정 — 에디터에서 setAdminPassword('실제비번') 형태로 1회 실행
+function setAdminPassword(plainPw) {
+  if (!plainPw) { Logger.log('비밀번호를 인자로 넣으세요. 예) setAdminPassword("mypw")'); return; }
+  var props = PropertiesService.getScriptProperties();
+  var salt  = _randomToken(16);
+  var hash  = _hashPassword(plainPw, salt);
+  props.setProperty(PROP_ADMIN_SALT, salt);
+  props.setProperty(PROP_ADMIN_HASH, hash);
+  Logger.log('[관리자 비밀번호 설정 완료]');
+}
+
+// ============================================================
+//  [B] 비밀번호 해시 / 검증 — 3번
+// ============================================================
+//  salt + SHA-256 반복 해시. (GAS에 bcrypt가 없어 SHA-256 다중 라운드로 강화)
+function _hashPassword(plain, salt) {
+  var rounds = 1000;
+  var data = salt + '::' + plain;
+  var bytes = null;
+  for (var i = 0; i < rounds; i++) {
+    bytes = Utilities.computeDigest(
+      Utilities.DigestAlgorithm.SHA_256,
+      (bytes ? _bytesToHex(bytes) : data) + salt
+    );
+  }
+  return _bytesToHex(bytes);
+}
+
+// 상수시간 비교 — 타이밍 공격 방어 (10번)
+function _constantTimeEquals(a, b) {
+  a = String(a); b = String(b);
+  if (a.length !== b.length) return false;
+  var diff = 0;
+  for (var i = 0; i < a.length; i++) {
+    diff |= (a.charCodeAt(i) ^ b.charCodeAt(i));
+  }
+  return diff === 0;
+}
+
+// 평문이 저장된 해시와 일치하는지 검증
+function _verifyPassword(plain, salt, expectedHash) {
+  if (!salt || !expectedHash) return false;
+  var actual = _hashPassword(plain, salt);
+  return _constantTimeEquals(actual, expectedHash);
+}
+
+// ============================================================
+//  [C] 토큰 발급 / 검증 (HMAC 서명) — 1·2번 토대
+// ============================================================
+//  토큰 형식:  base64url(payloadJson) + '.' + base64url(hmac)
+//  payload: { scope:'admin'|'school', school:'...', exp: <ms> }
+function _issueToken(scope, school, ttlMinutes) {
+  var payload = {
+    scope: scope,
+    school: school || '',
+    exp: Date.now() + ttlMinutes * 60 * 1000
+  };
+  var body = _b64url(JSON.stringify(payload));
+  var sig  = _sign(body);
+  return body + '.' + sig;
+}
+
+//  토큰 검증 → 성공 시 payload 객체, 실패 시 null
+//  requiredScope 지정 시 scope 불일치도 실패
+function _verifyToken(token, requiredScope) {
   try {
-    var raw    = e.postData.contents;
-    var data   = JSON.parse(raw);
-    var action = data.action || 'upload';
+    if (!token || token.indexOf('.') === -1) return null;
+    var parts = token.split('.');
+    var body = parts[0], sig = parts[1];
+    var expected = _sign(body);
+    if (!_constantTimeEquals(sig, expected)) return null;     // 서명 위조
+    var payload = JSON.parse(_b64urlDecode(body));
+    if (Date.now() > payload.exp) return null;                // 만료
+    if (requiredScope && payload.scope !== requiredScope) return null;
+    return payload;
+  } catch (e) {
+    return null;
+  }
+}
 
-    if (action === 'setPassword')        return setPassword(data);
-    if (action === 'deletePassword')     return deletePasswordRow(data.school);
-    if (action === 'setDownloadEnabled') return setDownloadEnabled(data.school, data.enabled);
-    if (action === 'deleteRecording')    return deleteRecording(data.fileId);
+function _sign(text) {
+  var key = PropertiesService.getScriptProperties().getProperty(PROP_HMAC_KEY);
+  var raw = Utilities.computeHmacSha256Signature(text, key);
+  return _bytesToHex(raw);
+}
 
-    // ── 음성 업로드 ──
-    var school    = data.school;
-    var name      = data.name;
-    var className = data.className;
-    var audioB64  = data.audioBase64;
-    var mimeType  = data.mimeType;
+// ============================================================
+//  [D] registry 접근 헬퍼 — 4번 토대
+// ============================================================
+function _getRegistrySheet() {
+  var id = REGISTRY_SS_ID ||
+           PropertiesService.getScriptProperties().getProperty(PROP_REGISTRY_ID);
+  if (!id) throw new Error('REGISTRY 미설정 — initSetup()을 먼저 실행하세요.');
+  var ss = SpreadsheetApp.openById(id);
+  var sh = ss.getSheetByName(REGISTRY_SHEET);
+  if (!sh) throw new Error('registry 시트를 찾을 수 없습니다.');
+  return sh;
+}
 
-    if (!school || !name || !className || !audioB64)
-      return makeJson({ success: false, error: '필수 항목 누락' });
+// 학교명으로 registry 행 객체 반환 (없으면 null)
+//  반환: { row:<1기준 행번호>, school, ssId, folderId, pwHash, pwSalt,
+//          downloadEnabled, startDate, endDate, gradYear, retainUntil }
+function _findSchool(school) {
+  var sh = _getRegistrySheet();
+  var values = sh.getDataRange().getValues();
+  var target = String(school || '').trim();
+  for (var i = 1; i < values.length; i++) {
+    if (String(values[i][0]).trim() === target) {
+      return {
+        row: i + 1,
+        school: values[i][0],
+        ssId: values[i][1],
+        folderId: values[i][2],
+        pwHash: values[i][3],
+        pwSalt: values[i][4],
+        downloadEnabled: !(values[i][5] === false || String(values[i][5]).toLowerCase() === 'false'),
+        startDate: values[i][6],
+        endDate: values[i][7],
+        gradYear: values[i][8],
+        retainUntil: values[i][9]
+      };
+    }
+  }
+  return null;
+}
 
-    var sheet   = getSheet();
-    var allRows = sheet.getDataRange().getValues();
-    for (var i = 1; i < allRows.length; i++) {
-      if (allRows[i][1] === school && allRows[i][2] === name && allRows[i][3] === className)
-        return makeJson({ success: false, error: 'ALREADY_SUBMITTED' });
+// 학교별 스프레드시트의 recordings 시트 핸들 반환
+function _getSchoolRecSheet(ssId) {
+  var ss = SpreadsheetApp.openById(ssId);
+  var sh = ss.getSheetByName(SCHOOL_REC_SHEET);
+  if (!sh) {
+    sh = ss.insertSheet(SCHOOL_REC_SHEET);
+    sh.appendRow(['timestamp','name','class','fileName','fileId','mimeType']);
+    sh.setFrozenRows(1);
+  }
+  return sh;
+}
+
+// ============================================================
+//  [D-2] 학교 등록 / 수정 / 삭제 / 목록 — 1단계
+//  ------------------------------------------------------------
+//  이 단계 함수들은 모두 "관리자 토큰"이 필요합니다.
+//  토큰 검증은 doPost(2단계)에서 수행하고, 여기서는
+//  검증이 끝났다는 전제로 호출되는 내부 로직만 둡니다.
+// ============================================================
+
+// 학교 등록(신규) 또는 수정(기존)
+//  data: { school, password, startDate, endDate, gradYear, retainUntil }
+//   · 신규: 전용 스프레드시트 + Drive 폴더 자동 생성, 비번 해시 저장
+//   · 기존: 비번(입력 시에만 갱신)·기간·보관정보 갱신
+//  ※ 기존 setPassword(data) 를 대체 (함수명 변경)
+function registerOrUpdateSchool(data) {
+  var school     = String(data.school || '').trim();
+  var password   = String(data.password || '').trim();
+  var startDate  = String(data.startDate || '').trim();
+  var endDate    = String(data.endDate || '').trim();
+  var gradYear   = String(data.gradYear || '').trim();
+  var retainUntil= String(data.retainUntil || '').trim();
+
+  if (!school) return makeJson({ success: false, error: '학교명을 입력하세요' });
+
+  var lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(10000); // 동시 등록 충돌 방지
+  } catch (le) {
+    return makeJson({ success: false, error: '잠시 후 다시 시도해 주세요(서버 혼잡)' });
+  }
+
+  try {
+    var sh  = _getRegistrySheet();
+    var existing = _findSchool(school);
+
+    if (existing) {
+      // ── 기존 학교 수정 ──
+      var r = existing.row;
+      // 비번은 입력했을 때만 갱신 (빈 값이면 기존 유지)
+      if (password) {
+        var salt = _randomToken(16);
+        var hash = _hashPassword(password, salt);
+        sh.getRange(r, 4).setValue(hash); // pwHash
+        sh.getRange(r, 5).setValue(salt); // pwSalt
+      }
+      sh.getRange(r, 7).setValue(startDate);   // startDate
+      sh.getRange(r, 8).setValue(endDate);     // endDate
+      sh.getRange(r, 9).setValue(gradYear);    // gradYear
+      sh.getRange(r, 10).setValue(retainUntil);// retainUntil
+      return makeJson({ success: true, updated: true });
     }
 
-    var rootFolder   = getOrCreateFolder(DriveApp.getRootFolder(), ROOT_FOLDER_NAME);
-    var schoolFolder = getOrCreateFolder(rootFolder, school);
+    // ── 신규 학교 등록 ──
+    if (!password) return makeJson({ success: false, error: '신규 등록 시 비밀번호는 필수입니다' });
 
-    var ext = 'webm';
-    if (mimeType.indexOf('mp4') !== -1) ext = 'm4a';
-    if (mimeType.indexOf('ogg') !== -1) ext = 'ogg';
+    // 1) 전용 스프레드시트 생성 + recordings 시트 초기화
+    var schoolSs = SpreadsheetApp.create('졸업앨범_' + school);
+    var firstSheet = schoolSs.getSheets()[0];
+    firstSheet.setName(SCHOOL_REC_SHEET);
+    firstSheet.appendRow(['timestamp','name','class','fileName','fileId','mimeType']);
+    firstSheet.setFrozenRows(1);
+    var ssId = schoolSs.getId();
 
-    var fileName = name + '_' + className + '.' + ext;
-    var bytes    = Utilities.base64Decode(audioB64);
-    var blob     = Utilities.newBlob(bytes, mimeType, fileName);
-    var file     = schoolFolder.createFile(blob);
-    file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+    // 2) Drive 폴더 생성 (루트 폴더 아래 학교 폴더)
+    var rootFolder   = _getOrCreateFolder(DriveApp.getRootFolder(), ROOT_FOLDER_NAME);
+    var schoolFolder = _getOrCreateFolder(rootFolder, school);
+    var folderId     = schoolFolder.getId();
 
-    sheet.appendRow([new Date(), school, name, className, fileName, file.getId(), mimeType]);
-    return makeJson({ success: true, fileId: file.getId() });
+    // 3) 비번 해시
+    var nSalt = _randomToken(16);
+    var nHash = _hashPassword(password, nSalt);
 
+    // 4) registry 행 추가
+    sh.appendRow([
+      school, ssId, folderId, nHash, nSalt,
+      true, startDate, endDate,
+      gradYear, retainUntil, new Date()
+    ]);
+
+    return makeJson({ success: true, created: true, ssId: ssId, folderId: folderId });
+
+  } catch (err) {
+    return makeJson({ success: false, error: err.message });
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+// 다운로드 허용 토글 (registry 기반)
+function setDownloadEnabled(school, enabled) {
+  if (!school) return makeJson({ success: false, error: '학교명이 없습니다' });
+  var info = _findSchool(school);
+  if (!info) return makeJson({ success: false, error: '해당 학교를 찾을 수 없습니다' });
+  var sh = _getRegistrySheet();
+  sh.getRange(info.row, 6).setValue(enabled === true || enabled === 'true');
+  return makeJson({ success: true });
+}
+
+// 학교 삭제 — registry 행 + 학교 스프레드시트 + Drive 폴더(휴지통)
+//  ※ 기존 deletePasswordRow(school) 를 대체 (함수명 변경)
+//  옵션: data.purgeFiles === true 이면 폴더/시트까지 휴지통 이동,
+//        아니면 registry 행만 제거(데이터는 보존)
+function deleteSchool(school, purgeFiles) {
+  if (!school) return makeJson({ success: false, error: '학교명이 없습니다' });
+  var info = _findSchool(school);
+  if (!info) return makeJson({ success: false, error: '해당 학교를 찾을 수 없습니다' });
+
+  var lock = LockService.getScriptLock();
+  try { lock.waitLock(10000); } catch (le) {
+    return makeJson({ success: false, error: '잠시 후 다시 시도해 주세요(서버 혼잡)' });
+  }
+
+  try {
+    if (purgeFiles === true || purgeFiles === 'true') {
+      // 학교 스프레드시트 휴지통
+      try { if (info.ssId) DriveApp.getFileById(info.ssId).setTrashed(true); } catch (e1) {}
+      // 학교 Drive 폴더 휴지통
+      try { if (info.folderId) DriveApp.getFolderById(info.folderId).setTrashed(true); } catch (e2) {}
+    }
+    // registry 행 제거 (최신 행번호 재조회 후 삭제 — 안전)
+    var fresh = _findSchool(school);
+    if (fresh) _getRegistrySheet().deleteRow(fresh.row);
+    return makeJson({ success: true, purged: (purgeFiles === true || purgeFiles === 'true') });
+  } catch (err) {
+    return makeJson({ success: false, error: err.message });
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+// 관리자용 학교 목록 — 비번 해시는 절대 반환하지 않음(평문 노출 차단, 1번)
+function getSchoolList() {
+  var sh = _getRegistrySheet();
+  var values = sh.getDataRange().getValues();
+  var list = [];
+  for (var i = 1; i < values.length; i++) {
+    if (!values[i][0]) continue;
+    list.push({
+      school:          String(values[i][0]).trim(),
+      hasPassword:     !!values[i][3],                 // 해시 존재 여부만 (평문 미반환)
+      downloadEnabled: !(values[i][5] === false || String(values[i][5]).toLowerCase() === 'false'),
+      startDate:       values[i][6] ? fmtDate(values[i][6]) : '',
+      endDate:         values[i][7] ? fmtDate(values[i][7]) : '',
+      gradYear:        values[i][8] ? String(values[i][8]) : '',
+      retainUntil:     values[i][9] ? fmtDate(values[i][9]) : ''
+    });
+  }
+  list.sort(function(a, b){ return a.school < b.school ? -1 : 1; });
+  return makeJson({ schools: list });
+}
+
+// 폴더 생성 헬퍼 (기존 getOrCreateFolder 를 내부용으로 이식, 이름 _ 접두)
+function _getOrCreateFolder(parent, name) {
+  var iter = parent.getFoldersByName(name);
+  return iter.hasNext() ? iter.next() : parent.createFolder(name);
+}
+
+// ============================================================
+//  [F] 무차별 대입 방어 (rate limit) — 10번
+//  ------------------------------------------------------------
+//  CacheService에 "키별 실패 횟수"를 기록. N회 실패 시 잠금.
+//  키는 학교명 기준(IP를 GAS에서 신뢰성 있게 얻기 어려움).
+// ============================================================
+var RL_MAX_FAILS   = 5;     // 허용 실패 횟수
+var RL_WINDOW_SEC  = 600;   // 잠금 유지 시간(초) = 10분
+
+function _rlKey(scope, id) { return 'rl_' + scope + '_' + id; }
+
+function _rlCheck(scope, id) {
+  var cache = CacheService.getScriptCache();
+  var raw = cache.get(_rlKey(scope, id));
+  var n = raw ? parseInt(raw, 10) : 0;
+  return n < RL_MAX_FAILS; // true면 시도 허용
+}
+
+function _rlFail(scope, id) {
+  var cache = CacheService.getScriptCache();
+  var key = _rlKey(scope, id);
+  var raw = cache.get(key);
+  var n = (raw ? parseInt(raw, 10) : 0) + 1;
+  cache.put(key, String(n), RL_WINDOW_SEC);
+  return n;
+}
+
+function _rlReset(scope, id) {
+  CacheService.getScriptCache().remove(_rlKey(scope, id));
+}
+
+// ============================================================
+//  [G] 라우팅 — doGet / doPost (2번·8번 토큰 검증 포함)
+// ============================================================
+function doPost(e) {
+  try {
+    var data   = JSON.parse(e.postData.contents);
+    var action = data.action || 'upload';
+
+    // ── 관리자 로그인 (토큰 발급) — 1번 ──
+    if (action === 'adminLogin') return adminLogin(data);
+
+    // ── 관리자 전용 액션 (토큰 필수) ──
+    var adminActions = {
+      registerSchool: 1, deleteSchool: 1, setDownloadEnabled: 1,
+      deleteRecording: 1, purgeExpired: 1
+    };
+    if (adminActions[action]) {
+      var ap = _verifyToken(data.token, 'admin');
+      if (!ap) return makeJson({ success: false, error: 'AUTH_REQUIRED' });
+      if (action === 'registerSchool')     return registerOrUpdateSchool(data);
+      if (action === 'deleteSchool')        return deleteSchool(data.school, data.purgeFiles);
+      if (action === 'setDownloadEnabled')  return setDownloadEnabled(data.school, data.enabled);
+      if (action === 'deleteRecording')     return deleteRecording(data.school, data.fileId);
+      if (action === 'purgeExpired')        return purgeExpired();
+    }
+
+    // ── 학교 로그인 (교사용 토큰 발급) — 2번 ──
+    if (action === 'schoolLogin') return schoolLogin(data);
+
+    // ── 음성 업로드 (학생용; 학교 토큰 필요) — 6번 Lock ──
+    if (action === 'upload') return uploadRecording(data);
+
+    return makeJson({ success: false, error: '알 수 없는 요청' });
   } catch (err) {
     return makeJson({ success: false, error: err.message });
   }
 }
 
-// ------------------------------------------------------------
-//  GET
-// ------------------------------------------------------------
 function doGet(e) {
   var action = e.parameter.action || '';
 
-  if (action === 'schools') {
-    var values  = getSheet().getDataRange().getValues();
-    var schools = [];
-    for (var i = 1; i < values.length; i++) {
-      var s = values[i][1];
-      if (s && schools.indexOf(s) === -1) schools.push(s);
-    }
-    schools.sort();
-    return makeJson({ schools: schools });
+  // 공개 재생: 서명된 play 토큰 필요 (비번 불필요, QR에 토큰 내장) — 2·8번
+  if (action === 'play') {
+    return playAudio(e.parameter.s || '', e.parameter.f || '', e.parameter.t || '');
   }
 
-  if (action === 'checkPassword') {
-    var school = e.parameter.school || '';
-    var pw     = e.parameter.pw     || '';
-    if (!school || !pw) return makeJson({ ok: false });
-    var pwRows = getPwSheet().getDataRange().getValues();
-    for (var k = 1; k < pwRows.length; k++) {
-      if (String(pwRows[k][0]).trim() === school) {
-        // 비밀번호 확인
-        var pwOk = String(pwRows[k][1]).trim() === pw.trim();
-        if (!pwOk) return makeJson({ ok: false });
-        // 기간 검증
-        var startDate = pwRows[k][3] ? fmtDate(pwRows[k][3]) : '';
-        var endDate   = pwRows[k][4] ? fmtDate(pwRows[k][4]) : '';
-        if (startDate || endDate) {
-          var today = new Date(); today.setHours(0,0,0,0);
-          if (startDate) {
-            var sd = new Date(startDate); sd.setHours(0,0,0,0);
-            if (today < sd) return makeJson({ ok: false, error: '녹음 기간이 아직 시작되지 않았습니다.\n시작일 : ' + startDate });
-          }
-          if (endDate) {
-            var ed = new Date(endDate); ed.setHours(23,59,59,999);
-            if (today > ed) return makeJson({ ok: false, error: '녹음 기간이 종료됐습니다.\n종료일 : ' + endDate });
-          }
-        }
-        return makeJson({ ok: true });
-      }
-    }
-    return makeJson({ ok: true, noPassword: true });
+  // 공개: 학교 비번 존재/기간 확인용 (비번 자체는 미반환)
+  if (action === 'checkPeriod') return checkPeriod(e.parameter.school || '');
+
+  // 학교 토큰 또는 관리자 토큰 필요: 학생 목록 / 메타 / 오디오 스트리밍
+  if (action === 'list' || action === 'meta' || action === 'audio') {
+    var tok = e.parameter.token;
+    var sp = _verifyToken(tok, 'school');
+    var ap = sp ? null : _verifyToken(tok, 'admin');
+    if (!sp && !ap) return makeJson({ ok: false, error: 'AUTH_REQUIRED' });
+    // 학교 토큰이면 토큰의 학교로 고정, 관리자 토큰이면 파라미터의 학교 사용
+    var targetSchool = sp ? sp.school : String(e.parameter.school || '').trim();
+    if (!targetSchool) return makeJson({ ok: false, error: '학교가 지정되지 않았습니다' });
+    if (action === 'list')  return listRecordings(targetSchool);
+    if (action === 'meta')  return getMeta(targetSchool, e.parameter.f || '');
+    if (action === 'audio') return getAudio(targetSchool, e.parameter.f || '');
   }
 
-  if (action === 'list') {
-    var school2 = e.parameter.school || '';
-    var all     = getSheet().getDataRange().getValues();
-    var students = [];
-    for (var j = 1; j < all.length; j++) {
-      if (all[j][1] !== school2) continue;
-      students.push({
-        school: all[j][1], name: all[j][2], className: all[j][3],
-        fileName: all[j][4], fileId: all[j][5],
-        timestamp: all[j][0] ? all[j][0].toString() : ''
-      });
-    }
-    return makeJson({ students: students });
+  // 관리자 토큰 필요: 학교 목록
+  if (action === 'schoolList') {
+    var gp = _verifyToken(e.parameter.token, 'admin');
+    if (!gp) return makeJson({ ok: false, error: 'AUTH_REQUIRED' });
+    return getSchoolList();
   }
 
-  // ── 빠른 메타데이터 (Drive 접근 없음, ~0.5초) ──
-  if (action === 'meta') {
-    try {
-      var fid   = e.parameter.f || '';
-      var rows3 = getSheet().getDataRange().getValues();
-      var found = null;
-      for (var n = 1; n < rows3.length; n++) {
-        if (rows3[n][5] === fid) { found = rows3[n]; break; }
-      }
-      if (!found) return makeJson({ ok: false, error: '녹음을 찾을 수 없습니다' });
-      var pwRows4 = getPwSheet().getDataRange().getValues();
-      var dlEnabled = true;
-      for (var q = 1; q < pwRows4.length; q++) {
-        if (String(pwRows4[q][0]).trim() === String(found[1]).trim()) {
-          var v = pwRows4[q][2];
-          if (v === false || String(v).toLowerCase() === 'false') dlEnabled = false;
-          break;
-        }
-      }
-      return makeJson({
-        ok: true,
-        school: found[1], name: found[2], className: found[3],
-        downloadEnabled: dlEnabled
-      });
-    } catch(emeta) {
-      return makeJson({ ok: false, error: emeta.message });
-    }
-  }
-
-  // ── 오디오 데이터 (b64) — audioBin은 audio의 별칭 (하위호환) ──
-  if (action === 'audioBin') {
-    e.parameter.action = 'audio';
-    // fall-through: 아래 audio 블록이 동일하게 처리
-  }
-
-  // ── 오디오 데이터 (b64, ~3~10초) — 재생 + 다운로드 공용 ──
-  if (action === 'audio' || action === 'audioBin') {
-    try {
-      var fid2  = e.parameter.f || '';
-      var rows5 = getSheet().getDataRange().getValues();
-      var found2 = null;
-      for (var r2 = 1; r2 < rows5.length; r2++) {
-        if (rows5[r2][5] === fid2) { found2 = rows5[r2]; break; }
-      }
-      if (!found2) return makeJson({ ok: false, error: '녹음을 찾을 수 없습니다' });
-      var f5  = DriveApp.getFileById(fid2);
-      var bl5 = f5.getBlob();
-      // downloadEnabled 확인 (meta 실패 시 폴백으로 사용)
-      var pwRowsAu = getPwSheet().getDataRange().getValues();
-      var dlAu = true;
-      for (var qa = 1; qa < pwRowsAu.length; qa++) {
-        if (String(pwRowsAu[qa][0]).trim() === String(found2[1]).trim()) {
-          var va = pwRowsAu[qa][2];
-          if (va === false || String(va).toLowerCase() === 'false') dlAu = false;
-          break;
-        }
-      }
-      return makeJson({
-        ok: true,
-        b64:  Utilities.base64Encode(bl5.getBytes()),
-        mime: bl5.getContentType(),
-        school: found2[1], name: found2[2], className: found2[3],
-        downloadEnabled: dlAu
-      });
-    } catch(ex) {
-      return makeJson({ ok: false, error: ex.message });
-    }
-  }
-
-  if (action === 'getPasswords') {
-    var pwAll = getPwSheet().getDataRange().getValues();
-    var list  = [];
-    for (var p = 1; p < pwAll.length; p++) {
-      if (!pwAll[p][0]) continue;
-      var dv2 = pwAll[p][2];
-      list.push({
-        school:          String(pwAll[p][0]).trim(),
-        password:        String(pwAll[p][1]).trim(),
-        downloadEnabled: !(dv2 === false || String(dv2).toLowerCase() === 'false'),
-        startDate:       pwAll[p][3] ? fmtDate(pwAll[p][3]) : '',
-        endDate:         pwAll[p][4] ? fmtDate(pwAll[p][4]) : ''
-      });
-    }
-    return makeJson({ passwords: list });
+  // 관리자 토큰 필요: QR용 play 토큰 발급 (fileId+school에 서명)
+  if (action === 'playToken') {
+    var pp = _verifyToken(e.parameter.token, 'admin');
+    if (!pp) return makeJson({ ok: false, error: 'AUTH_REQUIRED' });
+    return issuePlayToken(e.parameter.school || '', e.parameter.f || '');
   }
 
   return makeJson({ error: '알 수 없는 요청' });
 }
 
-// ------------------------------------------------------------
-//  비밀번호 + 기간 저장 (passwords 시트 A~E열)
-// ------------------------------------------------------------
-function setPassword(data) {
-  var school    = (data.school    || '').trim();
-  var password  = (data.password  || '').trim();
-  var startDate = (data.startDate || '').trim();
-  var endDate   = (data.endDate   || '').trim();
+// ============================================================
+//  [H] 인증 액션 — 1·2·3·10번
+// ============================================================
+function adminLogin(data) {
+  var pw = String(data.password || '');
+  if (!_rlCheck('admin', 'master'))
+    return makeJson({ success: false, error: 'LOCKED', message: '시도가 많아 잠시 잠겼습니다. 10분 후 다시 시도하세요.' });
 
-  if (!school || !password)
-    return makeJson({ success: false, error: '학교명과 비밀번호를 입력하세요' });
+  var props = PropertiesService.getScriptProperties();
+  var salt  = props.getProperty(PROP_ADMIN_SALT);
+  var hash  = props.getProperty(PROP_ADMIN_HASH);
+  if (!salt || !hash) return makeJson({ success: false, error: 'NOT_CONFIGURED' });
 
-  var sheet = getPwSheet();
-  var rows  = sheet.getDataRange().getValues();
-  for (var i = 1; i < rows.length; i++) {
-    if (String(rows[i][0]).trim() === school) {
-      sheet.getRange(i + 1, 2).setValue(password);
-      sheet.getRange(i + 1, 4).setValue(startDate);
-      sheet.getRange(i + 1, 5).setValue(endDate);
-      return makeJson({ success: true, updated: true });
-    }
+  if (_verifyPassword(pw, salt, hash)) {
+    _rlReset('admin', 'master');
+    return makeJson({ success: true, token: _issueToken('admin', '', TOKEN_TTL_ADMIN) });
   }
-  sheet.appendRow([school, password, true, startDate, endDate]);
-  return makeJson({ success: true, created: true });
+  var fails = _rlFail('admin', 'master');
+  return makeJson({ success: false, error: 'WRONG', remain: Math.max(0, RL_MAX_FAILS - fails) });
 }
 
-// ------------------------------------------------------------
-//  다운로드 토글
-// ------------------------------------------------------------
-function setDownloadEnabled(school, enabled) {
+function schoolLogin(data) {
+  var school = String(data.school || '').trim();
+  var pw     = String(data.password || '');
   if (!school) return makeJson({ success: false, error: '학교명이 없습니다' });
-  var sheet = getPwSheet();
-  var rows  = sheet.getDataRange().getValues();
-  for (var i = 1; i < rows.length; i++) {
-    if (String(rows[i][0]).trim() === String(school).trim()) {
-      sheet.getRange(i + 1, 3).setValue(enabled === true || enabled === 'true');
-      return makeJson({ success: true });
-    }
+
+  if (!_rlCheck('school', school))
+    return makeJson({ success: false, error: 'LOCKED', message: '시도가 많아 잠시 잠겼습니다. 10분 후 다시 시도하세요.' });
+
+  var info = _findSchool(school);
+  if (!info) return makeJson({ success: false, error: 'NO_SCHOOL' });
+
+  // 비번 검증 (해시)
+  if (!_verifyPassword(pw, info.pwSalt, info.pwHash)) {
+    var fails = _rlFail('school', school);
+    return makeJson({ success: false, error: 'WRONG', remain: Math.max(0, RL_MAX_FAILS - fails) });
   }
-  return makeJson({ success: false, error: '해당 학교를 찾을 수 없습니다' });
+
+  // 기간 검증
+  var periodErr = _periodError(info.startDate, info.endDate);
+  if (periodErr) return makeJson({ success: false, error: 'PERIOD', message: periodErr });
+
+  _rlReset('school', school);
+  return makeJson({ success: true, token: _issueToken('school', school, TOKEN_TTL_SCHOOL) });
 }
 
-// ------------------------------------------------------------
-//  비밀번호 행 삭제
-// ------------------------------------------------------------
-function deletePasswordRow(school) {
-  if (!school) return makeJson({ success: false, error: '학교명이 없습니다' });
-  var sheet = getPwSheet();
-  var rows  = sheet.getDataRange().getValues();
-  for (var i = rows.length - 1; i >= 1; i--) {
-    if (String(rows[i][0]).trim() === String(school).trim()) {
-      sheet.deleteRow(i + 1);
-      return makeJson({ success: true });
-    }
-  }
-  return makeJson({ success: false, error: '해당 학교를 찾을 수 없습니다' });
+// 공개: 학교 존재 + 기간만 확인 (학생 녹음 진입 전 안내용)
+function checkPeriod(school) {
+  school = String(school || '').trim();
+  if (!school) return makeJson({ ok: false });
+  var info = _findSchool(school);
+  if (!info) return makeJson({ ok: false, error: 'NO_SCHOOL' });
+  var periodErr = _periodError(info.startDate, info.endDate);
+  if (periodErr) return makeJson({ ok: false, error: 'PERIOD', message: periodErr });
+  return makeJson({ ok: true, needPassword: !!info.pwHash });
 }
 
-// ------------------------------------------------------------
-//  녹음 삭제 (Drive 파일 휴지통 + recordings 행 삭제)
-// ------------------------------------------------------------
-function deleteRecording(fileId) {
-  if (!fileId) return makeJson({ success: false, error: 'fileId 없음' });
+// 기간 검증 헬퍼 → 문제 있으면 메시지, 정상이면 ''
+function _periodError(startDate, endDate) {
+  var s = startDate ? fmtDate(startDate) : '';
+  var en = endDate ? fmtDate(endDate) : '';
+  if (!s && !en) return '';
+  var today = new Date(); today.setHours(0,0,0,0);
+  if (s) { var sd = new Date(s); sd.setHours(0,0,0,0);
+    if (today < sd) return '녹음 기간이 아직 시작되지 않았습니다.\n시작일 : ' + s; }
+  if (en) { var ed = new Date(en); ed.setHours(23,59,59,999);
+    if (today > ed) return '녹음 기간이 종료됐습니다.\n종료일 : ' + en; }
+  return '';
+}
+
+// ============================================================
+//  [I] 업로드 — 6번 (LockService 중복방지)
+// ============================================================
+function uploadRecording(data) {
+  var sp = _verifyToken(data.token, 'school');
+  if (!sp) return makeJson({ success: false, error: 'AUTH_REQUIRED' });
+
+  var school    = sp.school; // 토큰의 학교로 고정 (위조 방지)
+  var name      = String(data.name || '').trim();
+  var className = String(data.className || '').trim();
+  var audioB64  = data.audioBase64;
+  var mimeType  = data.mimeType || 'audio/mp4';
+
+  if (!name || !className || !audioB64)
+    return makeJson({ success: false, error: '필수 항목 누락' });
+
+  var info = _findSchool(school);
+  if (!info) return makeJson({ success: false, error: 'NO_SCHOOL' });
+
+  var lock = LockService.getScriptLock();
+  try { lock.waitLock(15000); } catch (le) {
+    return makeJson({ success: false, error: '서버가 혼잡합니다. 잠시 후 다시 시도해 주세요.' });
+  }
+
   try {
-    try { DriveApp.getFileById(fileId).setTrashed(true); } catch(fe) { /* 이미 없음 */ }
-    var sheet = getSheet();
+    var sheet = _getSchoolRecSheet(info.ssId);
     var rows  = sheet.getDataRange().getValues();
+    // 중복 검사 (락 안에서 — race condition 차단)
+    for (var i = 1; i < rows.length; i++) {
+      if (String(rows[i][1]).trim() === name && String(rows[i][2]).trim() === className)
+        return makeJson({ success: false, error: 'ALREADY_SUBMITTED' });
+    }
+
+    var ext = 'webm';
+    if (mimeType.indexOf('mp4') !== -1) ext = 'm4a';
+    if (mimeType.indexOf('ogg') !== -1) ext = 'ogg';
+
+    var folder   = DriveApp.getFolderById(info.folderId);
+    var fileName = name + '_' + className + '.' + ext;
+    var bytes    = Utilities.base64Decode(audioB64);
+    var blob     = Utilities.newBlob(bytes, mimeType, fileName);
+    var file     = folder.createFile(blob);
+    // 비공개 유지 — 공개 공유 설정하지 않음 (2번)
+
+    sheet.appendRow([new Date(), name, className, fileName, file.getId(), mimeType]);
+    return makeJson({ success: true, fileId: file.getId() });
+  } catch (err) {
+    return makeJson({ success: false, error: err.message });
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+// ============================================================
+//  [J] 조회 / 스트리밍 — 2·5·8번
+// ============================================================
+function listRecordings(school) {
+  var info = _findSchool(school);
+  if (!info) return makeJson({ ok: false, error: 'NO_SCHOOL' });
+  var rows = _getSchoolRecSheet(info.ssId).getDataRange().getValues();
+  var students = [];
+  for (var j = 1; j < rows.length; j++) {
+    students.push({
+      name: rows[j][1], className: rows[j][2],
+      fileName: rows[j][3], fileId: rows[j][4],
+      timestamp: rows[j][0] ? rows[j][0].toString() : ''
+    });
+  }
+  return makeJson({ ok: true, students: students });
+}
+
+function getMeta(school, fileId) {
+  var info = _findSchool(school);
+  if (!info) return makeJson({ ok: false, error: 'NO_SCHOOL' });
+  var rows = _getSchoolRecSheet(info.ssId).getDataRange().getValues();
+  for (var n = 1; n < rows.length; n++) {
+    if (String(rows[n][4]) === fileId) {
+      return makeJson({
+        ok: true, school: school, name: rows[n][1], className: rows[n][2],
+        downloadEnabled: info.downloadEnabled
+      });
+    }
+  }
+  return makeJson({ ok: false, error: '녹음을 찾을 수 없습니다' });
+}
+
+// 오디오 — 토큰 검증된 학교의 fileId만 반환. base64로 주되,
+// 파일은 Drive 비공개 유지 (5번 base64 오버헤드는 GAS 한계상 잔존, 한계 명시)
+function getAudio(school, fileId) {
+  var info = _findSchool(school);
+  if (!info) return makeJson({ ok: false, error: 'NO_SCHOOL' });
+
+  // fileId가 정말 이 학교 소속인지 시트로 교차 확인 (8번: 임의 fileId 접근 차단)
+  var rows = _getSchoolRecSheet(info.ssId).getDataRange().getValues();
+  var owned = false, meta = null;
+  for (var r = 1; r < rows.length; r++) {
+    if (String(rows[r][4]) === fileId) { owned = true; meta = rows[r]; break; }
+  }
+  if (!owned) return makeJson({ ok: false, error: '권한이 없거나 녹음을 찾을 수 없습니다' });
+
+  try {
+    var blob = DriveApp.getFileById(fileId).getBlob();
+    return makeJson({
+      ok: true,
+      b64: Utilities.base64Encode(blob.getBytes()),
+      mime: blob.getContentType(),
+      school: school, name: meta[1], className: meta[2],
+      downloadEnabled: info.downloadEnabled
+    });
+  } catch (ex) {
+    return makeJson({ ok: false, error: ex.message });
+  }
+}
+
+// ── play 토큰: fileId+school에 묶인 서명 (QR에 내장, 비번 없이 재생 허용) ──
+//  payload: { scope:'play', school, fid, exp }
+//  졸업앨범 QR은 인쇄물이라 만료를 매우 길게(졸업연도+N년) 두되,
+//  retainUntil 보관정책으로 파일 자체가 정리되면 자연히 무효화됨.
+var PLAY_TOKEN_TTL_DAYS = 1825; // 5년
+
+function issuePlayToken(school, fileId) {
+  school = String(school || '').trim();
+  if (!school || !fileId) return makeJson({ ok: false, error: 'school/fileId 누락' });
+  var info = _findSchool(school);
+  if (!info) return makeJson({ ok: false, error: 'NO_SCHOOL' });
+  // 해당 fileId가 이 학교 소속인지 확인
+  var rows = _getSchoolRecSheet(info.ssId).getDataRange().getValues();
+  var owned = false;
+  for (var i = 1; i < rows.length; i++) {
+    if (String(rows[i][4]) === fileId) { owned = true; break; }
+  }
+  if (!owned) return makeJson({ ok: false, error: '해당 학교의 녹음이 아닙니다' });
+
+  var payload = {
+    scope: 'play', school: school, fid: fileId,
+    exp: Date.now() + PLAY_TOKEN_TTL_DAYS * 24 * 60 * 60 * 1000
+  };
+  var body = _b64url(JSON.stringify(payload));
+  var token = body + '.' + _sign(body);
+  return makeJson({ ok: true, token: token });
+}
+
+function _verifyPlayToken(token, school, fileId) {
+  try {
+    if (!token || token.indexOf('.') === -1) return false;
+    var parts = token.split('.');
+    if (!_constantTimeEquals(parts[1], _sign(parts[0]))) return false;
+    var p = JSON.parse(_b64urlDecode(parts[0]));
+    if (p.scope !== 'play') return false;
+    if (Date.now() > p.exp) return false;
+    if (String(p.school).trim() !== String(school).trim()) return false;
+    if (String(p.fid) !== String(fileId)) return false;
+    return true;
+  } catch (e) { return false; }
+}
+
+// 공개 재생 — play 토큰 검증 후 비공개 파일을 b64로 반환
+function playAudio(school, fileId, token) {
+  if (!_verifyPlayToken(token, school, fileId))
+    return makeJson({ ok: false, error: 'AUTH_REQUIRED' });
+  var info = _findSchool(school);
+  if (!info) return makeJson({ ok: false, error: 'NO_SCHOOL' });
+
+  var rows = _getSchoolRecSheet(info.ssId).getDataRange().getValues();
+  var meta = null;
+  for (var r = 1; r < rows.length; r++) {
+    if (String(rows[r][4]) === fileId) { meta = rows[r]; break; }
+  }
+  if (!meta) return makeJson({ ok: false, error: '녹음을 찾을 수 없습니다' });
+
+  try {
+    var blob = DriveApp.getFileById(fileId).getBlob();
+    return makeJson({
+      ok: true,
+      b64: Utilities.base64Encode(blob.getBytes()),
+      mime: blob.getContentType(),
+      school: school, name: meta[1], className: meta[2],
+      downloadEnabled: info.downloadEnabled
+    });
+  } catch (ex) {
+    return makeJson({ ok: false, error: ex.message });
+  }
+}
+
+// 녹음 삭제 (관리자) — 학교 스코프 안에서만
+function deleteRecording(school, fileId) {
+  if (!fileId) return makeJson({ success: false, error: 'fileId 없음' });
+  var info = _findSchool(school);
+  if (!info) return makeJson({ success: false, error: 'NO_SCHOOL' });
+  try {
+    var sheet = _getSchoolRecSheet(info.ssId);
+    var rows  = sheet.getDataRange().getValues();
+    var hit = false;
     for (var i = rows.length - 1; i >= 1; i--) {
-      if (String(rows[i][5]).trim() === String(fileId).trim()) {
+      if (String(rows[i][4]).trim() === String(fileId).trim()) {
+        try { DriveApp.getFileById(fileId).setTrashed(true); } catch (fe) {}
         sheet.deleteRow(i + 1);
-        return makeJson({ success: true });
+        hit = true;
+        break;
       }
     }
-    return makeJson({ success: true });
-  } catch(err) {
+    return makeJson({ success: hit, error: hit ? '' : '해당 녹음을 찾을 수 없습니다' });
+  } catch (err) {
     return makeJson({ success: false, error: err.message });
   }
 }
 
-// ------------------------------------------------------------
-//  헬퍼
-// ------------------------------------------------------------
-function getOrCreateFolder(parent, name) {
-  var iter = parent.getFoldersByName(name);
-  return iter.hasNext() ? iter.next() : parent.createFolder(name);
-}
-
-function getSheet() {
-  var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
-  var sh = ss.getSheetByName(SHEET_NAME);
-  if (!sh) {
-    sh = ss.insertSheet(SHEET_NAME);
-    sh.appendRow(['timestamp','school','name','class','fileName','fileId','mimeType']);
-    sh.setFrozenRows(1);
+// ============================================================
+//  [K] 보관 정책 — 11번
+//  ------------------------------------------------------------
+//  retainUntil 이 지난 학교의 파일/시트를 휴지통으로.
+//  · 관리자 수동 호출(purgeExpired) 또는
+//  · 시간 기반 트리거로 자동 실행 가능 (installPurgeTrigger).
+// ============================================================
+function purgeExpired() {
+  var sh = _getRegistrySheet();
+  var values = sh.getDataRange().getValues();
+  var today = new Date(); today.setHours(0,0,0,0);
+  var purged = [];
+  for (var i = 1; i < values.length; i++) {
+    var school = values[i][0];
+    var retain = values[i][9];
+    if (!school || !retain) continue;
+    var rd = (retain instanceof Date) ? retain : new Date(retain);
+    if (isNaN(rd)) continue;
+    rd.setHours(23,59,59,999);
+    if (today > rd) {
+      try { if (values[i][1]) DriveApp.getFileById(values[i][1]).setTrashed(true); } catch(e1){}
+      try { if (values[i][2]) DriveApp.getFolderById(values[i][2]).setTrashed(true); } catch(e2){}
+      purged.push(school);
+    }
   }
-  return sh;
+  return makeJson({ success: true, purged: purged });
 }
 
-function getPwSheet() {
-  var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
-  var sh = ss.getSheetByName(PW_SHEET_NAME);
-  if (!sh) {
-    sh = ss.insertSheet(PW_SHEET_NAME);
-    sh.appendRow(['school','password','downloadEnabled','startDate','endDate']);
-    sh.setFrozenRows(1);
+// 시간 기반 자동 보관정리 트리거 설치 (에디터에서 1회 실행)
+function installPurgeTrigger() {
+  var triggers = ScriptApp.getProjectTriggers();
+  for (var i = 0; i < triggers.length; i++) {
+    if (triggers[i].getHandlerFunction() === 'purgeExpired') return; // 이미 있음
   }
-  return sh;
+  ScriptApp.newTrigger('purgeExpired').timeBased().everyDays(1).atHour(3).create();
+  Logger.log('보관정리 트리거 설치 완료 (매일 새벽 3시)');
 }
 
+// ============================================================
+//  [E] 공용 유틸
+// ============================================================
 function makeJson(data) {
   return ContentService
     .createTextOutput(JSON.stringify(data))
     .setMimeType(ContentService.MimeType.JSON);
+}
+
+function _randomToken(byteLen) {
+  var bytes = [];
+  for (var i = 0; i < byteLen; i++) bytes.push(Math.floor(Math.random() * 256));
+  // 더 강한 엔트로피: 현재시각 + UUID 혼합
+  var seed = Utilities.computeDigest(
+    Utilities.DigestAlgorithm.SHA_256,
+    Utilities.getUuid() + Date.now() + bytes.join(',')
+  );
+  return _bytesToHex(seed).substring(0, byteLen * 2);
+}
+
+function _bytesToHex(bytes) {
+  var hex = '';
+  for (var i = 0; i < bytes.length; i++) {
+    var b = bytes[i] < 0 ? bytes[i] + 256 : bytes[i];
+    hex += ('0' + b.toString(16)).slice(-2);
+  }
+  return hex;
+}
+
+function _b64url(str) {
+  return Utilities.base64EncodeWebSafe(
+    Utilities.newBlob(str).getBytes()
+  ).replace(/=+$/, '');
+}
+
+function _b64urlDecode(b64) {
+  var pad = b64.length % 4;
+  if (pad) b64 += '===='.slice(pad);
+  return Utilities.newBlob(Utilities.base64DecodeWebSafe(b64)).getDataAsString();
 }
 
 // 날짜값(Date 객체 또는 문자열)을 "YYYY-MM-DD" 형식으로 반환
@@ -336,4 +841,26 @@ function fmtDate(val) {
   var m  = String(d.getMonth() + 1).padStart(2, '0');
   var dd = String(d.getDate()).padStart(2, '0');
   return y + '-' + m + '-' + dd;
+}
+
+// ------------------------------------------------------------
+//  자가 점검 — 에디터에서 실행해 토대 함수 동작 확인
+// ------------------------------------------------------------
+function _selfTest() {
+  // 1) 해시 왕복
+  var salt = _randomToken(16);
+  var h = _hashPassword('test1234', salt);
+  Logger.log('해시 검증(true 기대): ' + _verifyPassword('test1234', salt, h));
+  Logger.log('해시 검증(false 기대): ' + _verifyPassword('wrong', salt, h));
+
+  // 2) 토큰 왕복 (HMAC 키 필요 → initSetup 후 실행)
+  if (PropertiesService.getScriptProperties().getProperty(PROP_HMAC_KEY)) {
+    var t = _issueToken('school', '테스트초', 1);
+    var p = _verifyToken(t, 'school');
+    Logger.log('토큰 검증(payload 기대): ' + JSON.stringify(p));
+    Logger.log('토큰 scope 불일치(null 기대): ' + _verifyToken(t, 'admin'));
+    Logger.log('토큰 위조(null 기대): ' + _verifyToken(t + 'x', 'school'));
+  } else {
+    Logger.log('HMAC 키 없음 — initSetup() 먼저 실행하세요.');
+  }
 }
