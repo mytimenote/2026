@@ -164,9 +164,13 @@ footer{margin-top:3rem;text-align:center;font-size:12px;color:var(--faint);lette
   <div style="width:100%;max-width:340px;padding:32px 24px;background:#fff;border-radius:16px;box-shadow:0 8px 32px rgba(0,0,0,.12);text-align:center;">
     <div style="font-size:20px;font-weight:700;margin-bottom:6px;">관리자 로그인</div>
     <div style="font-size:13px;color:#888;margin-bottom:20px;">관리자 비밀번호를 입력하세요</div>
-    <input id="adminPw" type="password" placeholder="비밀번호" autocomplete="off"
-      onkeydown="if(event.key==='Enter')adminLogin()"
-      style="width:100%;padding:12px 14px;font-size:15px;border:1px solid #ddd;border-radius:10px;box-sizing:border-box;margin-bottom:12px;" />
+    <div style="position:relative;margin-bottom:12px;">
+      <input id="adminPw" type="password" placeholder="비밀번호" autocomplete="off"
+        onkeydown="if(event.key==='Enter')adminLogin()"
+        style="width:100%;padding:12px 44px 12px 14px;font-size:15px;border:1px solid #ddd;border-radius:10px;box-sizing:border-box;" />
+      <button type="button" onclick="togglePw()" id="pwEye"
+        style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:18px;padding:4px 8px;line-height:1;color:#888;">👁</button>
+    </div>
     <button id="loginBtn" onclick="adminLogin()"
       style="width:100%;padding:12px;font-size:15px;font-weight:600;color:#fff;background:#111;border:none;border-radius:10px;cursor:pointer;">로그인</button>
     <div id="loginErr" style="color:#d33;font-size:13px;margin-top:12px;min-height:18px;white-space:pre-line;"></div>
@@ -365,6 +369,14 @@ footer{margin-top:3rem;text-align:center;font-size:12px;color:var(--faint);lette
     showLoginGate();   // 로그인 전까지 본문 잠금 (1번)
   };
 
+  /* ── 비밀번호 표시/숨김 토글 ── */
+  function togglePw(){
+    var inp = document.getElementById('adminPw');
+    var eye = document.getElementById('pwEye');
+    if (inp.type === 'password'){ inp.type = 'text';  eye.textContent = '🙈'; }
+    else                        { inp.type = 'password'; eye.textContent = '👁'; }
+  }
+
   /* ── 로그인 게이트 (1번) ── */
   function showLoginGate(){
     document.getElementById('loginGate').style.display = 'flex';
@@ -398,7 +410,8 @@ footer{margin-top:3rem;text-align:center;font-size:12px;color:var(--faint);lette
       } else if (data.error === 'NOT_CONFIGURED'){
         errEl.textContent = '서버에 관리자 비밀번호가 설정되지 않았습니다. setAdminPassword 실행 필요.';
       } else {
-        errEl.textContent = '비밀번호가 틀렸습니다.' + (data.remain != null ? ` (남은 시도 ${data.remain}회)` : '');
+        errEl.textContent = '비밀번호가 틀렸습니다.' + (data.remain != null ? ` (남은 시도 ${data.remain}회)` : '')
+          + '\n[서버 응답] ' + JSON.stringify(data);
       }
     } catch(e){
       errEl.textContent = '로그인 중 오류가 발생했습니다. GAS URL을 확인하세요.';
