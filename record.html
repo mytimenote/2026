@@ -93,7 +93,7 @@ select option{background:var(--card)}
 .rec-btn.recording{background:var(--red);border-color:var(--red);color:#FBF9F4;animation:breathe 1.6s ease-in-out infinite}
 /* 비밀번호 */
 #pwScreen{animation:up .6s cubic-bezier(.22,1,.36,1) both}
-.pw-icon{font-family:var(--serif);font-size:30px;text-align:center;margin-bottom:1.125rem;color:var(--primary)}
+.pw-icon{font-family:var(--serif);font-size:21px;text-align:center;margin-bottom:1rem;color:var(--primary);letter-spacing:-.2px}
 .pw-desc{font-size:13px;color:var(--muted);text-align:center;line-height:2;margin-bottom:1.75rem;font-weight:300}
 .pw-input-wrap{position:relative}
 .pw-input-wrap input{padding-right:44px;letter-spacing:3px;font-size:18px;font-weight:400;text-align:center}
@@ -125,23 +125,21 @@ select option{background:var(--card)}
 footer{margin-top:3rem;text-align:center;font-size:11px;color:var(--faint);letter-spacing:2px;font-weight:300;text-transform:uppercase}
 /* 접이식 안내 */
 .guide-wrap{margin-top:1rem}
-.guide-btn{width:100%;padding:15px 18px;background:var(--card);border:1px solid var(--border-soft);border-radius:3px;display:flex;align-items:center;justify-content:space-between;font-size:13px;font-family:var(--sans);font-weight:400;letter-spacing:.3px;color:var(--sub);cursor:pointer;transition:background .25s}
-.guide-btn:hover{background:var(--input-bg)}
-.guide-arrow{font-size:11px;color:var(--muted);transition:transform .3s}
-.guide-arrow.open{transform:rotate(180deg)}
 .guide-content{display:none;margin-top:.625rem;flex-direction:column;gap:.625rem}
 .guide-content.open{display:flex;animation:fadeIn .3s ease both}
-.guide-section{background:var(--card);border:1px solid var(--border-soft);border-radius:3px;padding:1.5rem 1.625rem}
-.guide-section-title{font-size:11px;font-weight:500;color:var(--primary);margin-bottom:1rem;letter-spacing:1.5px;text-transform:uppercase}
-.guide-item{font-size:13px;color:var(--sub);line-height:2;padding-left:.25rem;font-weight:300}
-.guide-item+.guide-item{margin-top:.1rem}
-.guide-item::before{content:'—';color:var(--faint);margin-right:.625rem}
-.guide-warn{font-size:12px;color:var(--red);margin-top:.875rem;line-height:1.9;font-weight:300}
+.guide-section{background:var(--card);border:1px solid var(--border-soft);border-radius:3px;padding:1.625rem 1.625rem}
+.guide-section-title{font-size:13px;font-weight:600;color:var(--primary);margin-bottom:1.125rem;letter-spacing:1px}
+.guide-item{font-size:14.5px;color:var(--sub);line-height:1.85;padding-left:1.1rem;text-indent:-1.1rem;font-weight:400}
+.guide-item+.guide-item{margin-top:.5rem}
+.guide-item::before{content:'—';color:var(--faint);margin-right:.5rem;text-indent:0}
+.guide-item br{text-indent:0}
+.guide-warn{font-size:13.5px;color:var(--red);margin-top:1.125rem;padding-top:1rem;border-top:1px solid var(--border-soft);line-height:1.85;font-weight:400}
 .guide-warn span{display:block}
-.guide-example{background:var(--card-warm);border-radius:3px;padding:1rem 1.125rem;margin-top:.5rem;border:1px solid var(--border-soft)}
-.guide-example+.guide-example{margin-top:.625rem}
-.guide-ex-label{font-size:11px;font-weight:500;color:var(--primary);margin-bottom:.4rem;letter-spacing:.5px}
-.guide-ex-text{font-family:var(--serif);font-size:13px;color:var(--sub);line-height:1.95;font-style:normal}
+.guide-warn span+span{margin-top:.4rem}
+.guide-example{background:var(--card-warm);border-radius:3px;padding:1.125rem 1.25rem;margin-top:.625rem;border:1px solid var(--border-soft)}
+.guide-example+.guide-example{margin-top:.75rem}
+.guide-ex-label{font-size:12.5px;font-weight:600;color:var(--primary);margin-bottom:.5rem;letter-spacing:.3px}
+.guide-ex-text{font-family:var(--serif);font-size:14.5px;color:var(--sub);line-height:1.9;font-style:normal}
 /* 구분 토글 */
 .type-toggle{display:flex;gap:0;background:transparent;border:1px solid var(--border);border-radius:2px;padding:0;margin-bottom:1.5rem;overflow:hidden}
 .type-btn{flex:1;padding:12px;border-radius:0;border:none;font-size:13px;font-family:var(--sans);font-weight:300;cursor:pointer;color:var(--muted);background:transparent;transition:background .25s,color .25s;letter-spacing:.3px}
@@ -197,39 +195,35 @@ footer{margin-top:3rem;text-align:center;font-size:11px;color:var(--faint);lette
         <span class="btn-label">확인</span>
       </button>
     </div>
-    <!-- 접이식 안내 -->
+    <!-- 녹음 안내 (항상 노출) -->
     <div class="guide-wrap">
-      <button class="guide-btn" onclick="toggleGuide()">
-        <span>녹음 방법 안내</span>
-        <span class="guide-arrow" id="guideArrow">▾</span>
-      </button>
-      <div class="guide-content" id="guideContent">
+      <div class="guide-content open" id="guideContent">
 
         <!-- 녹음 방법 -->
         <div class="guide-section">
-          <div class="guide-section-title">📖 녹음 방법</div>
+          <div class="guide-section-title">녹음 방법</div>
           <div class="guide-item">선생님께 받은 비밀번호를 입력하세요</div>
           <div class="guide-item">이름, 반, 번호를 정확히 입력하세요</div>
           <div class="guide-item">녹음 버튼을 눌러 40초 이내로 말하세요</div>
           <div class="guide-item">다시 듣기로 확인 후 저장하세요</div>
           <div class="guide-warn">
-            <span>⚠️ 같은 이름·반·번호로는 1회만 녹음 가능합니다</span>
-            <span>⚠️ 문제가 생긴 경우 선생님께 문의하세요</span>
+            <span>같은 이름·반·번호로는 한 번만 녹음할 수 있어요</span>
+            <span>문제가 생긴 경우 선생님께 문의해 주세요</span>
           </div>
         </div>
 
         <!-- 주의사항 -->
         <div class="guide-section">
-          <div class="guide-section-title">🎙 녹음 시 주의사항</div>
+          <div class="guide-section-title">녹음 시 주의사항</div>
           <div class="guide-item">조용한 곳에서 녹음하세요</div>
-          <div class="guide-item">휴대폰을 입에서 주먹 하나 정도 거리에 두고 말하세요</div>
-          <div class="guide-item">녹음 중 전화나 알림이 오지 않도록 해주세요</div>
-          <div class="guide-item">저장 완료 전에 화면을 닫으면 처음부터 다시 해야 해요</div>
+          <div class="guide-item">휴대폰을 입에서 주먹 하나 정도<br>거리에 두고 말하세요</div>
+          <div class="guide-item">녹음 중 전화나 알림이<br>오지 않도록 해주세요</div>
+          <div class="guide-item">저장이 끝나기 전에 화면을 닫으면<br>처음부터 다시 해야 해요</div>
         </div>
 
         <!-- 예시 -->
         <div class="guide-section">
-          <div class="guide-section-title">💬 이렇게 말해보세요</div>
+          <div class="guide-section-title">이렇게 말해보세요</div>
           <div class="guide-example">
             <div class="guide-ex-label">1. 고마운 선생님에게</div>
             <div class="guide-ex-text">"선생님, 1년 동안 저희를 가르쳐 주셔서 정말 감사합니다. 선생님 덕분에 많이 성장할 수 있었어요…"</div>
@@ -449,14 +443,6 @@ footer{margin-top:3rem;text-align:center;font-size:11px;color:var(--faint);lette
     else showNeedQr();
   }
   initRecord();
-
-  function toggleGuide() {
-    const content = document.getElementById('guideContent');
-    const arrow   = document.getElementById('guideArrow');
-    const isOpen  = content.classList.contains('open');
-    content.classList.toggle('open', !isOpen);
-    arrow.classList.toggle('open', !isOpen);
-  }
 
   function togglePwVisible() {
     const i=$('pwInput');
