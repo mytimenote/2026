@@ -429,40 +429,49 @@ let verifiedName='', verifiedSchool='', rawBlob=null, audioMime='audio/webm';
 let audioReady=false, userTouched=false, dlEnabled=true;
 
 /* ── 진입: 짧은 코드(c) 우선 해석 → 없으면 기존 f/t/s 방식 ── */
-function showBadQr(detail) {
+function showBadQr() {
   ovLoading.style.display = 'none';
   ovSchool.textContent    = '잘못된 QR코드';
   ovStudent.textContent   = '올바른 QR코드를 스캔해 주세요';
-  // 진단용: 실패 원인을 화면 하단에 표시 (정상화 후 제거 예정)
-  if (detail) {
-    var dbg = document.createElement('div');
-    dbg.style.cssText = 'position:fixed;left:0;right:0;bottom:0;padding:12px;background:#33312E;color:#FBF9F4;font-size:11px;font-family:monospace;word-break:break-all;line-height:1.5;z-index:9999;max-height:50vh;overflow:auto';
-    dbg.textContent = '[진단] ' + detail;
-    document.body.appendChild(dbg);
-  }
 }
 async function initPlay() {
+  // 진단: 페이지 로드 직후 시점 표시
+  var dbgEl = document.createElement('div');
+  dbgEl.id = 'dbgLog';
+  dbgEl.style.cssText = 'position:fixed;left:0;right:0;bottom:0;padding:10px;background:#33312E;color:#FBF9F4;font-size:11px;font-family:monospace;word-break:break-all;line-height:1.5;z-index:9999;max-height:60vh;overflow:auto';
+  document.body.appendChild(dbgEl);
+  function dlog(m) { dbgEl.textContent += '\n' + m; }
+  dlog('[1] initPlay 시작. shortCode=' + shortCode + ', fileId=' + fileId);
+  dlog('[2] location=' + location.href);
+
   if (shortCode) {
+    var url = GAS_URL + '?action=resolveCode&c=' + encodeURIComponent(shortCode);
+    dlog('[3] fetch 시작: ' + url.substring(0,80) + '...');
     try {
-      var url = GAS_URL + '?action=resolveCode&c=' + encodeURIComponent(shortCode);
       const r = await fetchWithTimeout(url, 15000);
+      dlog('[4] 응답 받음. status=' + r.status + ', type=' + r.type);
       const txt = await r.text();
+      dlog('[5] 본문 길이=' + txt.length + ', 앞부분: ' + txt.substring(0,200));
       var d;
       try { d = JSON.parse(txt); }
-      catch (pe) { showBadQr('JSON 파싱 실패. 응답 첫 300자: ' + txt.substring(0,300)); return; }
+      catch (pe) { dlog('[6] JSON 파싱 실패: ' + pe.message); showBadQr(); return; }
+      dlog('[7] 파싱 OK. type=' + d.type + ', ok=' + d.ok);
       if (d.ok && d.type === 'student' && d.fileId && d.t) {
         fileId = d.fileId; playToken = d.t; playSchool = d.school;
+        dlog('[8] 검증 통과, loadAudio 호출');
         loadAudio();
         return;
       }
-      showBadQr('서버 응답: ' + JSON.stringify(d));
+      dlog('[8] 검증 실패. 응답=' + JSON.stringify(d));
+      showBadQr();
       return;
     } catch (e) {
-      showBadQr('fetch 에러: ' + (e && e.message ? e.message : String(e)));
+      dlog('[ERR] fetch 예외: ' + (e && e.message ? e.message : String(e)) + ' / name=' + (e && e.name));
+      showBadQr();
       return;
     }
   }
-  if (!fileId || !playToken || !playSchool) { showBadQr('파라미터 없음 (c도 f도 없이 접속)'); return; }
+  if (!fileId || !playToken || !playSchool) { dlog('[X] 파라미터 없음'); showBadQr(); return; }
   loadAudio();
 }
 initPlay();
