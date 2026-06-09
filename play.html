@@ -458,7 +458,7 @@ async function fetchWithTimeout(url, ms) {
   const ctrl = new AbortController();
   const tid  = setTimeout(() => ctrl.abort(), ms);
   try {
-    const res = await fetch(url, { signal: ctrl.signal });
+    const res = await fetch(url, { signal: ctrl.signal, redirect: 'follow' });
     clearTimeout(tid);
     return res;
   } catch(e) {
