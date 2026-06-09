@@ -448,7 +448,7 @@ async function initPlay() {
     var url = GAS_URL + '?action=resolveCode&c=' + encodeURIComponent(shortCode);
     dlog('[3] fetch 시작: ' + url.substring(0,80) + '...');
     try {
-      const r = await fetchWithTimeout(url, 15000);
+      const r = await fetch(url, { redirect: 'follow' });
       dlog('[4] 응답 받음. status=' + r.status + ', type=' + r.type);
       const txt = await r.text();
       dlog('[5] 본문 길이=' + txt.length + ', 앞부분: ' + txt.substring(0,200));
