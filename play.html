@@ -397,10 +397,9 @@ const BGM = (() => {
 
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbwVuXyVUJFG2HXSnDwhovHuv9En33gaEeOkOlmpAQ8KxExQJIEj19kbtGWuYfVUNY0F0A/exec';
 const _qp      = new URLSearchParams(location.search);
-const shortCode = _qp.get('c') || '';  // 짧은 코드 (QR에 포함). 있으면 resolveCode로 해석
-let fileId     = _qp.get('f') || '';
-let playToken  = _qp.get('t') || '';   // 서명된 재생 토큰
-let playSchool = _qp.get('s') || '';   // 학교
+const fileId   = _qp.get('f') || '';
+const playToken= _qp.get('t') || '';   // 서명된 재생 토큰 (admin이 QR에 포함)
+const playSchool = _qp.get('s') || ''; // 학교 (토큰 검증 대상)
 
 const overlay    = document.getElementById('overlay');
 const ovSchool   = document.getElementById('ovSchool');
@@ -427,50 +426,14 @@ const policyNote = document.getElementById('policyNote');
 let verifiedName='', verifiedSchool='', rawBlob=null, audioMime='audio/webm';
 let audioReady=false, userTouched=false, dlEnabled=true;
 
-/* ── 진입: 짧은 코드(c) 우선 해석 → 없으면 기존 f/t/s 방식 ── */
-function showBadQr() {
+/* ── 잘못된 URL ── */
+if (!fileId || !playToken || !playSchool) {
   ovLoading.style.display = 'none';
   ovSchool.textContent    = '잘못된 QR코드';
   ovStudent.textContent   = '올바른 QR코드를 스캔해 주세요';
-}
-async function initPlay() {
-  // 진단 로그 (정상화 후 제거)
-  var dbgEl = document.createElement('div');
-  dbgEl.style.cssText = 'position:fixed;left:0;right:0;bottom:0;padding:10px;background:#222;color:#fff;font-size:11px;font-family:monospace;word-break:break-all;line-height:1.5;z-index:9999;max-height:60vh;overflow:auto';
-  document.body.appendChild(dbgEl);
-  function dlog(m) { dbgEl.textContent += '\n' + m; }
-  dlog('[1] initPlay. shortCode=' + shortCode + ', fileId=' + fileId);
-
-  if (shortCode) {
-    var url = GAS_URL + '?action=resolveCode&c=' + encodeURIComponent(shortCode);
-    dlog('[2] fetch 시작');
-    try {
-      const r = await fetch(url, { redirect: 'follow' });
-      dlog('[3] 응답 status=' + r.status);
-      const txt = await r.text();
-      dlog('[4] 본문: ' + txt.substring(0,200));
-      var d;
-      try { d = JSON.parse(txt); }
-      catch (pe) { dlog('[5] 파싱 실패'); showBadQr(); return; }
-      if (d.ok && d.type === 'student' && d.fileId && d.t) {
-        fileId = d.fileId; playToken = d.t; playSchool = d.school;
-        dlog('[6] 검증 OK, loadAudio');
-        loadAudio();
-        return;
-      }
-      dlog('[6] 검증 실패: ' + JSON.stringify(d));
-      showBadQr();
-      return;
-    } catch (e) {
-      dlog('[ERR] ' + (e && e.message ? e.message : String(e)));
-      showBadQr();
-      return;
-    }
-  }
-  if (!fileId || !playToken || !playSchool) { dlog('[X] 파라미터 없음'); showBadQr(); return; }
+} else {
   loadAudio();
 }
-// initPlay()는 사용자 터치 시점(startPlayback)에서 호출됨 - iOS Safari cross-origin fetch 제약 우회
 
 /* ── 타임아웃 fetch 헬퍼 ── */
 async function fetchWithTimeout(url, ms) {
@@ -601,9 +564,6 @@ function startPlayback() {
     overlay.style.display  = 'none';
     playerWrap.style.display = 'block';
   }, 800);
-
-  // 사용자 제스처 이후 fetch (cross-origin 자동 fetch 차단 우회)
-  initPlay();
 
   // 음성은 준비됐을 때만 재생 (아니면 canplay 이벤트에서 처리)
   if (audioReady) player.play().catch(() => {});
