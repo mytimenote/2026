@@ -18,86 +18,100 @@
 </script>
 <script src="https://cdn.jsdelivr.net/npm/lamejs@1.2.1/lame.min.js"></script>
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Nanum+Myeongjo:wght@400;700;800&family=Noto+Sans+KR:wght@300;400;500;600&display=swap');
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --bg:#F7F8FA;--card:#fff;--primary:#3182F6;--pri-lt:#5B9DF8;--pri-bg:#EBF3FE;
-  --border:#E5E8EB;--border-l:#EEF1F5;--text:#191919;--sub:#4E4E4E;
-  --muted:#8B95A1;--faint:#C6CAD0;
-  --shadow:0 1px 3px rgba(0,0,0,.06),0 4px 16px rgba(0,0,0,.05);
+  --bg:#F3EFE7;
+  --card:#FBF9F4;
+  --card-warm:#F6F1E7;
+  --primary:#5A5D4E;
+  --pri-deep:#43463A;
+  --pri-bg:#E8E6DA;
+  --border:#E2DBCD;
+  --border-soft:#EDE7DA;
+  --text:#33312E;
+  --sub:#5C574E;
+  --muted:#928B7C;
+  --faint:#B8B0A0;
+  --red:#9C5B4E;
+  --red-bg:#F3E9E4;
+  --red-border:#E4D2C9;
+  --serif:'Nanum Myeongjo',serif;
+  --sans:'Noto Sans KR',sans-serif;
 }
-body{min-height:100vh;background:var(--bg);font-family:'Noto Sans KR',sans-serif;color:var(--text);display:flex;flex-direction:column;align-items:center;padding:2.5rem 1.25rem 3rem}
-@keyframes up    {from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:none}}
+body{min-height:100vh;background:var(--bg);font-family:var(--sans);color:var(--text);display:flex;flex-direction:column;align-items:center;padding:3.5rem 1.5rem 4rem;-webkit-font-smoothing:antialiased}
+@keyframes up    {from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
 @keyframes fadeIn{from{opacity:0}to{opacity:1}}
 @keyframes spin  {to{transform:rotate(360deg)}}
-@keyframes wave  {0%,100%{height:3px;opacity:.2}50%{height:34px;opacity:.85}}
-@keyframes bloom {0%{transform:scale(.75);opacity:0}60%{transform:scale(1.08)}100%{transform:scale(1);opacity:1}}
-@keyframes ring  {0%,100%{transform:scale(1);opacity:.5}50%{transform:scale(1.18);opacity:.12}}
+@keyframes wave  {0%,100%{height:3px;opacity:.25}50%{height:28px;opacity:.7}}
+@keyframes bloom {0%{opacity:0;transform:translateY(8px)}100%{opacity:1;transform:none}}
+@keyframes ring  {0%,100%{transform:scale(1);opacity:.4}50%{transform:scale(1.16);opacity:.1}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 
 /* ── 터치 오버레이 ── */
 .overlay{
   position:fixed;inset:0;z-index:200;
-  background:linear-gradient(155deg,#EBF3FE 0%,#F7F8FA 55%,#EFF6FF 100%);
+  background:linear-gradient(155deg,var(--bg) 0%,var(--card) 55%,var(--card-warm) 100%);
   display:flex;align-items:center;justify-content:center;
   cursor:pointer;transition:opacity .8s ease;
 }
 .overlay.hiding{opacity:0;pointer-events:none}
 .ov-inner{text-align:center;padding:2rem;animation:up .65s cubic-bezier(.22,1,.36,1) both}
-.ov-school {font-size:23px;font-weight:700;color:var(--text);letter-spacing:-.5px;margin-bottom:.25rem}
-.ov-student{font-size:14px;color:var(--primary);font-weight:500;min-height:20px;margin-bottom:.25rem}
-.ov-desc   {font-size:13px;color:var(--muted);font-weight:300;margin-bottom:2.25rem}
-.ring-wrap {position:relative;width:96px;height:96px;margin:0 auto 1.5rem}
-.r1{position:absolute;inset:0;border-radius:50%;border:2px solid var(--primary);animation:ring 2.2s ease-in-out infinite}
-.r2{position:absolute;inset:14px;border-radius:50%;border:1.5px solid var(--primary);animation:ring 2.2s ease-in-out infinite .55s}
-.r-icon{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:36px}
-.ov-hint  {font-size:14px;color:var(--sub);font-weight:500;margin-bottom:.4rem;display:none}
+.ov-school {font-family:var(--serif);font-size:22px;font-weight:800;color:var(--text);letter-spacing:-.3px;margin-bottom:.3rem;text-align:center}
+.ov-student{font-size:13px;color:var(--primary);font-weight:500;min-height:20px;margin-bottom:.3rem;letter-spacing:.3px}
+.ov-desc   {font-size:12px;color:var(--muted);font-weight:300;margin-bottom:2.25rem;letter-spacing:2px;text-transform:uppercase}
+.ring-wrap {position:relative;width:88px;height:88px;margin:0 auto 1.5rem}
+.r1{position:absolute;inset:0;border-radius:50%;border:1px solid var(--primary);animation:ring 2.2s ease-in-out infinite}
+.r2{position:absolute;inset:13px;border-radius:50%;border:1px solid var(--primary);animation:ring 2.2s ease-in-out infinite .55s}
+.r-icon{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:32px}
+.ov-hint  {font-size:13px;color:var(--sub);font-weight:400;margin-bottom:.4rem;display:none;letter-spacing:.3px}
 .ov-sub   {font-size:12px;color:var(--muted);font-weight:300;display:none}
-.ov-loading{display:flex;align-items:center;justify-content:center;gap:6px;font-size:12px;color:var(--muted);margin-top:1.25rem}
-.ov-spin  {width:12px;height:12px;border:2px solid var(--faint);border-top-color:var(--primary);border-radius:50%;animation:spin .8s linear infinite}
+.ov-loading{display:flex;align-items:center;justify-content:center;gap:6px;font-size:12px;color:var(--muted);margin-top:1.25rem;letter-spacing:.3px}
+.ov-spin  {width:11px;height:11px;border:1.5px solid var(--faint);border-top-color:var(--primary);border-radius:50%;animation:spin .8s linear infinite}
 
 /* ── 플레이어 ── */
 .wrap{width:100%;max-width:400px;animation:up .55s cubic-bezier(.22,1,.36,1) both}
-.top-header{margin-bottom:2rem}
-.school-name{font-size:26px;font-weight:700;line-height:1.3;letter-spacing:-.5px;margin-bottom:.25rem}
-.student-info{font-size:15px;color:var(--primary);margin-bottom:.25rem}
-.page-desc{font-size:14px;color:var(--muted);font-weight:300}
-.card{background:var(--card);border-radius:16px;padding:1.5rem;margin-bottom:.75rem;box-shadow:var(--shadow)}
-.card-title{font-size:13px;font-weight:600;color:var(--sub);margin-bottom:1.25rem}
-.waveform{display:flex;align-items:center;justify-content:center;gap:4px;height:44px;margin-bottom:1.375rem}
-.bar{width:3px;border-radius:99px;background:var(--pri-lt);height:3px;opacity:.2}
+.top-header{margin-bottom:2.75rem;animation:up .6s cubic-bezier(.22,1,.36,1) both}
+.school-name{font-family:var(--serif);font-size:27px;font-weight:800;color:var(--text);line-height:1.35;letter-spacing:-.3px;margin-bottom:.5rem;text-align:center}
+.student-info{font-size:13px;color:var(--primary);margin-bottom:.25rem;letter-spacing:.3px}
+.page-desc{font-size:12px;color:var(--muted);font-weight:400;letter-spacing:2.5px;text-transform:uppercase;text-align:center}
+.card{background:var(--card);border:1px solid var(--border-soft);border-radius:3px;padding:1.875rem 1.75rem;margin-bottom:1rem;box-shadow:none}
+.card-title{font-size:11px;font-weight:500;color:var(--muted);margin-bottom:1.25rem;letter-spacing:2px;text-transform:uppercase}
+.waveform{display:flex;align-items:center;justify-content:center;gap:5px;height:36px;margin-bottom:1.75rem}
+.bar{width:2px;border-radius:0;background:var(--primary);height:3px;opacity:.25}
 .waveform.playing .bar{animation:wave 1.35s ease-in-out infinite}
-.play-btn{width:64px;height:64px;border-radius:50%;border:none;background:var(--pri-bg);color:var(--primary);font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;margin:0 auto 1.25rem;transition:transform .12s,box-shadow .2s,background .2s;box-shadow:0 2px 10px rgba(49,130,246,.2)}
-.play-btn:hover{background:#D8EAFD;box-shadow:0 6px 20px rgba(49,130,246,.3);transform:scale(1.05)}
-.play-btn:active{transform:scale(.93)}
-.play-btn:disabled{opacity:.3;cursor:not-allowed;transform:none;box-shadow:none}
+.play-btn{width:76px;height:76px;border-radius:50%;border:1px solid var(--primary);background:transparent;color:var(--primary);font-size:22px;cursor:pointer;display:flex;align-items:center;justify-content:center;margin:0 auto 1.25rem;transition:background .3s,color .3s}
+.play-btn:hover{background:var(--pri-bg)}
+.play-btn:active{background:var(--pri-deep);color:var(--card)}
+.play-btn:disabled{opacity:.3;cursor:not-allowed}
 .seek-wrap{display:none}
-.seek-bar{-webkit-appearance:none;appearance:none;width:100%;height:3px;border-radius:99px;background:var(--border-l);outline:none;cursor:pointer}
-.seek-bar::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:var(--primary);border:2.5px solid var(--card);box-shadow:0 1px 6px rgba(49,130,246,.4);cursor:pointer;transition:transform .1s}
+.seek-bar{-webkit-appearance:none;appearance:none;width:100%;height:1px;border-radius:0;background:var(--border);outline:none;cursor:pointer}
+.seek-bar::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:var(--primary);border:2px solid var(--card);cursor:pointer;transition:transform .1s}
 .seek-bar::-webkit-slider-thumb:active{transform:scale(1.35)}
-.seek-bar::-moz-range-thumb{width:16px;height:16px;border-radius:50%;background:var(--primary);border:2.5px solid var(--card);cursor:pointer}
-.seek-time{font-size:11px;color:var(--muted);margin-top:9px;font-variant-numeric:tabular-nums}
-.status{text-align:center;font-size:13px;color:var(--muted);min-height:20px;margin-bottom:1rem}
-.status.err{color:#D94F4F;line-height:1.8}
+.seek-bar::-moz-range-thumb{width:14px;height:14px;border-radius:50%;background:var(--primary);border:2px solid var(--card);cursor:pointer}
+.seek-time{font-size:11px;color:var(--muted);margin-top:9px;font-variant-numeric:tabular-nums;letter-spacing:.5px}
+.status{text-align:center;font-size:13px;color:var(--muted);min-height:20px;margin-bottom:1rem;font-weight:300;letter-spacing:.3px}
+.status.err{color:var(--red);line-height:1.8}
 
 /* ── 완료 화면 ── */
 .done-wrap{display:none;text-align:center;padding:2rem 0;animation:fadeIn .6s ease both;width:100%;max-width:400px}
-.done-icon {font-size:54px;display:block;margin-bottom:1.25rem;animation:bloom .6s cubic-bezier(.22,1,.36,1) both}
-.done-title{font-size:20px;font-weight:700;margin-bottom:.5rem;letter-spacing:-.3px}
-.done-msg  {font-size:14px;color:var(--muted);line-height:2.1;font-weight:300}
-.done-divider{width:32px;height:1px;background:var(--border);margin:1.5rem auto}
+.done-icon {font-family:var(--serif);font-size:40px;display:block;margin-bottom:1.25rem;animation:bloom .6s cubic-bezier(.22,1,.36,1) both;color:var(--primary)}
+.done-title{font-family:var(--serif);font-size:20px;font-weight:700;margin-bottom:.5rem;letter-spacing:-.2px;color:var(--text)}
+.done-msg  {font-size:13px;color:var(--muted);line-height:2.1;font-weight:300;letter-spacing:.2px}
+.done-divider{width:32px;height:1px;background:var(--border);margin:1.375rem auto}
 .done-actions{display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap}
-.replay-btn{display:inline-flex;align-items:center;gap:8px;padding:13px 22px;border-radius:10px;border:none;background:var(--pri-bg);color:var(--primary);font-size:14px;font-family:'Noto Sans KR',sans-serif;font-weight:500;cursor:pointer;transition:background .2s;box-shadow:0 2px 10px rgba(49,130,246,.15)}
-.replay-btn:hover{background:#D8EAFD}
-.save-btn{display:inline-flex;align-items:center;gap:6px;padding:13px 22px;border-radius:10px;border:none;background:var(--primary);color:#fff;font-size:14px;font-family:'Noto Sans KR',sans-serif;font-weight:500;cursor:pointer;transition:background .15s,transform .1s;box-shadow:0 2px 8px rgba(49,130,246,.25)}
-.save-btn:hover:not(:disabled){background:var(--pri-lt)}
-.save-btn:active{transform:scale(.96)}
-.save-btn:disabled{opacity:.6;cursor:not-allowed}
-.save-btn .bs{display:none;width:12px;height:12px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite}
+.replay-btn{display:inline-flex;align-items:center;gap:8px;padding:13px 22px;border-radius:2px;border:1px solid var(--border);background:transparent;color:var(--sub);font-size:13px;font-family:var(--sans);font-weight:400;cursor:pointer;transition:background .25s;letter-spacing:.3px}
+.replay-btn:hover{background:var(--pri-bg)}
+.save-btn{display:inline-flex;align-items:center;gap:6px;padding:13px 22px;border-radius:2px;border:1px solid var(--primary);background:var(--primary);color:var(--card);font-size:13px;font-family:var(--sans);font-weight:400;cursor:pointer;transition:background .25s,opacity .25s;letter-spacing:.5px}
+.save-btn:hover:not(:disabled){background:var(--pri-deep);border-color:var(--pri-deep)}
+.save-btn:active{opacity:.7}
+.save-btn:disabled{opacity:.3;cursor:not-allowed}
+.save-btn .bs{display:none;width:11px;height:11px;border:1.5px solid rgba(251,249,244,.4);border-top-color:var(--card);border-radius:50%;animation:spin .7s linear infinite}
 .save-btn.converting .bs{display:block}
-.policy-note{background:var(--pri-bg);border:1.5px solid rgba(49,130,246,.2);border-radius:12px;padding:.875rem 1.125rem;margin-top:1.25rem;display:none;animation:fadeIn .5s ease both}
-.policy-note p{font-size:12.5px;color:var(--primary);font-weight:500;line-height:1.9;text-align:center}
-.policy-note p strong{color:#1A6AE8;font-weight:700}
-footer{margin-top:2.5rem;text-align:center;font-size:12px;color:var(--faint);letter-spacing:.3px;font-weight:300}
+.policy-note{background:var(--card-warm);border:1px solid var(--border-soft);border-radius:3px;padding:.875rem 1.125rem;margin-top:1.25rem;display:none;animation:fadeIn .5s ease both}
+.policy-note p{font-size:12.5px;color:var(--sub);font-weight:400;line-height:1.9;text-align:center;letter-spacing:.2px}
+.policy-note p strong{color:var(--text);font-weight:700}
+footer{margin-top:3rem;text-align:center;font-size:11px;color:var(--faint);letter-spacing:2px;font-weight:300;text-transform:uppercase}
 </style>
 </head>
 <body>
@@ -114,7 +128,7 @@ footer{margin-top:2.5rem;text-align:center;font-size:12px;color:var(--faint);let
     </div>
     <div class="ov-hint"    id="ovHint">화면을 터치하면 시작합니다</div>
     <div class="ov-loading" id="ovLoading"><span class="ov-spin"></span>음성을 불러오는 중…</div>
-    <button id="ovRetry" style="display:none;margin-top:1rem;padding:10px 24px;border-radius:10px;border:none;background:var(--primary);color:#fff;font-size:13px;font-family:'Noto Sans KR',sans-serif;font-weight:500;cursor:pointer" onclick="retryLoad()">🔄 다시 시도</button>
+    <button id="ovRetry" style="display:none;margin-top:1rem;padding:10px 24px;border-radius:2px;border:1px solid var(--primary);background:var(--primary);color:var(--card);font-size:13px;font-family:var(--sans);font-weight:400;cursor:pointer;letter-spacing:.5px" onclick="retryLoad()">다시 시도</button>
   </div>
 </div>
 
@@ -122,8 +136,8 @@ footer{margin-top:2.5rem;text-align:center;font-size:12px;color:var(--faint);let
 <div class="wrap" id="playerWrap" style="display:none">
   <div class="top-header">
     <div class="school-name" id="schoolName"></div>
-    <div class="student-info" id="studentInfo"></div>
-    <div class="page-desc">졸업 음성 메시지</div>
+    <div class="student-info" id="studentInfo" style="display:none"></div>
+    <div class="page-desc">졸업 음성 메시지 녹음</div>
   </div>
   <div class="card">
     <div class="card-title">음성 메시지</div>
@@ -143,12 +157,13 @@ footer{margin-top:2.5rem;text-align:center;font-size:12px;color:var(--faint);let
     </div>
     <div class="status" id="statusMsg"></div>
   </div>
+
   <footer>졸업앨범 음성 메시지</footer>
 </div>
 
 <!-- ── 완료 화면 ── -->
 <div class="done-wrap" id="doneWrap">
-  <span class="done-icon">🎓</span>
+  <span class="done-icon">✦</span>
   <div class="done-title" id="doneTitle"></div>
   <div class="done-divider"></div>
   <div class="done-msg" id="doneMsg"></div>

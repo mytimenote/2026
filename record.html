@@ -42,9 +42,9 @@ body{min-height:100vh;background:var(--bg);font-family:var(--sans);color:var(--t
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 .wrap{width:100%;max-width:400px}
 .top-header{margin-bottom:2.75rem;animation:up .6s cubic-bezier(.22,1,.36,1) both}
-.school-name{font-family:var(--serif);font-size:27px;font-weight:800;color:var(--text);line-height:1.35;letter-spacing:-.3px;margin-bottom:.5rem}
+.school-name{font-family:var(--serif);font-size:27px;font-weight:800;color:var(--text);line-height:1.35;letter-spacing:-.3px;margin-bottom:.5rem;text-align:center}
 .school-name.placeholder{color:var(--muted);font-size:20px;font-weight:700}
-.page-desc{font-size:12px;color:var(--muted);font-weight:400;letter-spacing:2.5px;text-transform:uppercase}
+.page-desc{font-size:12px;color:var(--muted);font-weight:400;letter-spacing:2.5px;text-transform:uppercase;text-align:center}
 .card{background:var(--card);border:1px solid var(--border-soft);border-radius:3px;padding:1.875rem 1.75rem;margin-bottom:1rem;box-shadow:none}
 .card-title{font-size:11px;font-weight:500;color:var(--muted);margin-bottom:1.25rem;letter-spacing:2px;text-transform:uppercase}
 .field{margin-bottom:1.125rem}
@@ -128,13 +128,15 @@ footer{margin-top:3rem;text-align:center;font-size:11px;color:var(--faint);lette
 .guide-content{display:none;margin-top:.625rem;flex-direction:column;gap:.625rem}
 .guide-content.open{display:flex;animation:fadeIn .3s ease both}
 .guide-section{background:var(--card);border:1px solid var(--border-soft);border-radius:3px;padding:1.625rem 1.625rem}
-.guide-section-title{font-size:13px;font-weight:600;color:var(--primary);margin-bottom:1.125rem;letter-spacing:1px}
-.guide-item{font-size:14.5px;color:var(--sub);line-height:1.85;padding-left:1.1rem;text-indent:-1.1rem;font-weight:400}
+.guide-section-title{font-size:13px;font-weight:700;color:var(--primary);margin-bottom:1.125rem;letter-spacing:1.5px;text-transform:uppercase;display:flex;align-items:center;gap:.5rem}
+.guide-section-title::before{content:'';display:inline-block;width:3px;height:13px;background:var(--primary);border-radius:1px;flex-shrink:0}
+.guide-item{font-size:14.5px;color:var(--sub);line-height:1.85;padding-left:1.3rem;text-indent:-1.3rem;font-weight:400}
 .guide-item+.guide-item{margin-top:.5rem}
-.guide-item::before{content:'—';color:var(--faint);margin-right:.5rem;text-indent:0}
+.guide-item::before{content:'·';color:var(--primary);margin-right:.55rem;font-size:18px;vertical-align:-.1em;text-indent:0}
 .guide-item br{text-indent:0}
 .guide-warn{font-size:13.5px;color:var(--red);margin-top:1.125rem;padding-top:1rem;border-top:1px solid var(--border-soft);line-height:1.85;font-weight:400}
-.guide-warn span{display:block}
+.guide-warn span{display:block;padding-left:1.3rem;text-indent:-1.3rem}
+.guide-warn span::before{content:'·';color:var(--red);margin-right:.55rem;font-size:18px;vertical-align:-.1em;text-indent:0}
 .guide-warn span+span{margin-top:.4rem}
 .guide-example{background:var(--card-warm);border-radius:3px;padding:1.125rem 1.25rem;margin-top:.625rem;border:1px solid var(--border-soft)}
 .guide-example+.guide-example{margin-top:.75rem}
