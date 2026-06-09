@@ -606,7 +606,7 @@ footer{margin-top:3rem;text-align:center;font-size:12px;color:var(--faint);lette
           <span class="pw-school">🏫 ${schoolDisp}</span>
           <span class="pw-value" id="pwval-${encSc}">${
             p.password
-              ? `<span class="pw-dot" id="pwdot-${encSc}">••••••</span><span class="pw-plain" id="pwplain-${encSc}" style="display:none">${esc(p.password)}</span> <span class="pw-eye" onclick="toggleSchoolPw('${encSc}')" style="cursor:pointer;user-select:none" title="비밀번호 보기/숨기기">👁</span>`
+              ? `<span class="pw-dot" id="pwdot-${encSc}">••••••</span><span class="pw-plain" id="pwplain-${encSc}" style="display:none">${esc(p.password)}</span> <span class="pw-eye" onclick="toggleSchoolPw('${encSc}')" style="cursor:pointer;display:inline-flex;vertical-align:middle;color:#999" title="비밀번호 보기/숨기기"><svg id="pweye-${encSc}" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg></span>`
               : (p.hasPassword ? '🔒 설정됨 (재저장 필요)' : '⚠ 미설정')
           }</span>
         </div>
@@ -743,10 +743,16 @@ footer{margin-top:3rem;text-align:center;font-size:12px;color:var(--faint);lette
   function toggleSchoolPw(encSc) {
     const dot   = document.getElementById('pwdot-' + encSc);
     const plain = document.getElementById('pwplain-' + encSc);
+    const svg   = document.getElementById('pweye-' + encSc);
     if (!dot || !plain) return;
     const show = plain.style.display === 'none';
     plain.style.display = show ? '' : 'none';
     dot.style.display   = show ? 'none' : '';
+    if (svg) {
+      svg.innerHTML = show
+        ? '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-10-7-10-7a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 10 7 10 7a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="2" y1="2" x2="22" y2="22"/>'
+        : '<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/>';
+    }
   }
 
   /* ── 링크 공유 ── */
