@@ -470,7 +470,7 @@ async function initPlay() {
   if (!fileId || !playToken || !playSchool) { dlog('[X] 파라미터 없음'); showBadQr(); return; }
   loadAudio();
 }
-initPlay();
+// initPlay()는 사용자 터치 시점(startPlayback)에서 호출됨 - iOS Safari cross-origin fetch 제약 우회
 
 /* ── 타임아웃 fetch 헬퍼 ── */
 async function fetchWithTimeout(url, ms) {
@@ -601,6 +601,9 @@ function startPlayback() {
     overlay.style.display  = 'none';
     playerWrap.style.display = 'block';
   }, 800);
+
+  // 사용자 제스처 이후 fetch (cross-origin 자동 fetch 차단 우회)
+  initPlay();
 
   // 음성은 준비됐을 때만 재생 (아니면 canplay 이벤트에서 처리)
   if (audioReady) player.play().catch(() => {});
