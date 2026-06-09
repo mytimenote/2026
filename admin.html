@@ -169,14 +169,13 @@ footer{margin-top:3rem;text-align:center;font-size:12px;color:var(--faint);lette
         onkeydown="if(event.key==='Enter')adminLogin()"
         style="width:100%;padding:12px 44px 12px 14px;font-size:15px;border:1px solid #ddd;border-radius:10px;box-sizing:border-box;" />
       <button type="button" onclick="togglePw()" id="pwEye"
-        style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:18px;padding:4px 8px;line-height:1;color:#888;">👁</button>
+        style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;padding:6px 8px;line-height:0;color:#999;">
+        <svg id="pwEyeSvg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>
+      </button>
     </div>
     <button id="loginBtn" onclick="adminLogin()"
       style="width:100%;padding:12px;font-size:15px;font-weight:600;color:#fff;background:#111;border:none;border-radius:10px;cursor:pointer;">로그인</button>
     <div id="loginErr" style="color:#d33;font-size:13px;margin-top:12px;min-height:18px;white-space:pre-line;"></div>
-    <div style="font-size:11px;color:#aaa;margin-top:16px;text-align:left;word-break:break-all;line-height:1.4;">
-      요청 대상 서버 URL:<br><span id="loginGasInfo" style="color:#777;"></span>
-    </div>
   </div>
 </div>
 
@@ -363,18 +362,17 @@ footer{margin-top:3rem;text-align:center;font-size:12px;color:var(--faint);lette
     localStorage.removeItem('gasUrl');
     document.getElementById('gasUrl').value   = DEFAULT_GAS;
     document.getElementById('pagesUrl').value = localStorage.getItem('pagesUrl') || DEFAULT_PAGES;
-    // 로그인 게이트에 현재 요청이 가는 URL 을 표시
-    var u = document.getElementById('loginGasInfo');
-    if (u) u.textContent = DEFAULT_GAS;
     showLoginGate();   // 로그인 전까지 본문 잠금 (1번)
   };
 
   /* ── 비밀번호 표시/숨김 토글 ── */
   function togglePw(){
     var inp = document.getElementById('adminPw');
-    var eye = document.getElementById('pwEye');
-    if (inp.type === 'password'){ inp.type = 'text';  eye.textContent = '🙈'; }
-    else                        { inp.type = 'password'; eye.textContent = '👁'; }
+    var svg = document.getElementById('pwEyeSvg');
+    var EYE = '<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/>';
+    var EYE_OFF = '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-10-7-10-7a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 10 7 10 7a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="2" y1="2" x2="22" y2="22"/>';
+    if (inp.type === 'password'){ inp.type = 'text';  svg.innerHTML = EYE_OFF; }
+    else                        { inp.type = 'password'; svg.innerHTML = EYE; }
   }
 
   /* ── 로그인 게이트 (1번) ── */
