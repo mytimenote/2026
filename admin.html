@@ -317,7 +317,7 @@ footer{margin-top:3rem;text-align:center;font-size:12px;color:var(--faint);lette
 
 <script>
   let students = [];
-  const DEFAULT_GAS   = 'https://script.google.com/macros/s/AKfycbwVuXyVUJFG2HXSnDwhovHuv9En33gaEeOkOlmpAQ8KxExQJIEj19kbtGWuYfVUNY0F0A/exec';
+  const DEFAULT_GAS   = 'https://script.google.com/macros/s/AKfycbxCIUMBHvu0YU77z4ULqrZAez6bue3cWi7Fzyg5slz-FdIY05K1EclHCRDUdcBoxXbPuQ/exec';
   const DEFAULT_PAGES = 'https://mytimenote.github.io/2026';
 
   /* ── 관리자 토큰 (메모리에만 보관; localStorage 저장 금지) ── */
@@ -442,15 +442,8 @@ footer{margin-top:3rem;text-align:center;font-size:12px;color:var(--faint);lette
     try {
       const data = await apiGet({ action:'list', school: school });
       if (data.error === 'AUTH_REQUIRED'){ logout(); return; }
-      students   = data.students || [];
-      // 각 학생의 play 토큰 발급 (QR URL에 내장) — 2·8번
-      document.getElementById('loadingRow').querySelector('span')?.replaceChildren?.();
-      await Promise.all(students.map(async s => {
-        try {
-          const t = await apiGet({ action:'playToken', school: school, f: s.fileId });
-          s.playToken = (t && t.ok) ? t.token : '';
-        } catch { s.playToken = ''; }
-      }));
+      // listRecordings 응답에 playToken 이미 포함됨 (관리자 토큰일 때 백엔드가 자동 첨부)
+      students = data.students || [];
       document.getElementById('loadingRow').style.display    = 'none';
       document.getElementById('resultSection').style.display = 'block';
       document.getElementById('statCount').textContent  = students.length + '명';
