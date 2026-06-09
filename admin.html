@@ -595,7 +595,7 @@ footer{margin-top:3rem;text-align:center;font-size:12px;color:var(--faint);lette
       <div class="pw-row" id="pwrow-${encSc}">
         <div class="pw-row-top">
           <span class="pw-school">🏫 ${schoolDisp}</span>
-          <span class="pw-value" id="pwval-${encSc}">${p.hasPassword?(p.password?esc(p.password):'🔒 설정됨'):'⚠ 미설정'}</span>
+          <span class="pw-value" id="pwval-${encSc}">${p.hasPassword?'🔒 설정됨':'⚠ 미설정'}</span>
         </div>
         <div class="pw-dates" id="pddates-${encSc}">${dateStr}</div>
         <div class="pw-actions">
@@ -819,8 +819,9 @@ footer{margin-top:3rem;text-align:center;font-size:12px;color:var(--faint);lette
       const data = await apiPost({ action:'registerSchool', school, password:newPw, startDate:start, endDate:end });
       if (data.error === 'AUTH_REQUIRED'){ logout(); return; }
       if (data.success) {
+        // 비번은 화면에 표시하지 않음 (평문 노출 차단)
         const valEl = document.getElementById('pwval-' + encSc);
-        if (valEl) valEl.textContent = newPw;
+        if (valEl) valEl.textContent = '🔒 설정됨';
         const cached = allPasswords.find(p => p.school === school);
         if (cached) cached.hasPassword = true;
         document.getElementById('pwch-' + encSc)?.classList.remove('open');
