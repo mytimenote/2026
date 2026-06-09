@@ -84,6 +84,10 @@ select{cursor:pointer;appearance:none;-webkit-appearance:none}
 .copy-btn.done{background:var(--green-bg);color:var(--green)}
 .period-btn{padding:7px 11px;border-radius:8px;border:none;background:var(--pri-bg);color:var(--primary);font-size:11.5px;font-family:'Noto Sans KR',sans-serif;font-weight:600;cursor:pointer;transition:background .15s;white-space:nowrap}
 .period-btn:hover{background:#D8EAFD}
+.pw-show{padding:7px 11px;border-radius:8px;border:1px solid #E2DBCD;background:#FBF9F4;color:#5A5D4E;font-size:11.5px;font-family:'Noto Sans KR',sans-serif;font-weight:600;cursor:pointer;transition:background .15s;white-space:nowrap;font-variant-numeric:tabular-nums}
+.pw-show:hover:not(:disabled){background:#F3EFE7}
+.pw-show.shown{background:#E8E6DA;color:#43463A;letter-spacing:.5px}
+.pw-show:disabled{opacity:.5;cursor:not-allowed}
 /* 인라인 기간 편집 패널 */
 .period-panel{display:none;margin-top:.75rem;padding:.875rem;background:var(--card);border-radius:10px;border:1.5px solid var(--pri-lt);animation:fadeIn .2s ease both}
 .period-panel.open{display:block}
@@ -609,6 +613,10 @@ footer{margin-top:3rem;text-align:center;font-size:12px;color:var(--faint);lette
           <button class="period-btn" style="background:#FFF7ED;color:#E07C2A;border:1px solid #F8DBBE" onclick="togglePwChangePanel('${encSc}')">
             🔑 비밀번호 변경
           </button>
+          <button class="pw-show" id="pwshow-${encSc}"
+            onclick="showSchoolPw('${safeSc}','${encSc}')">
+            👁 비번 보기
+          </button>
           <button class="copy-btn" id="copybtn-${encSc}"
             onclick="copyShareMsg('${safeSc}','${encSc}')">
             📋 복사
@@ -749,6 +757,56 @@ footer{margin-top:3rem;text-align:center;font-size:12px;color:var(--faint);lette
     }
     btn.textContent = '✓ 복사됨'; btn.classList.add('done');
     setTimeout(() => { btn.textContent='📋 복사'; btn.classList.remove('done'); }, 2000);
+  }
+
+  /* ── 비번 1건 조회 (👁 비번 보기 버튼) ──
+     · 클릭 시 백엔드에서 1건만 복호화해 반환 (응답에 평문 일괄 포함하던 옛 방식 차단)
+     · 10초 후 자동 가림. 다시 누르면 즉시 가림 */
+  async function showSchoolPw(school, encSc) {
+    const btn = document.getElementById('pwshow-' + encSc);
+    if (!btn) return;
+    // 이미 표시 중이면 즉시 가림
+    if (btn.dataset.shown === '1') {
+      btn.textContent = '👁 비번 보기';
+      btn.classList.remove('shown');
+      btn.dataset.shown = '0';
+      if (btn._hideTimer) { clearTimeout(btn._hideTimer); btn._hideTimer = null; }
+      return;
+    }
+    btn.disabled = true;
+    btn.textContent = '확인 중…';
+    try {
+      const data = await apiPost({ action:'getSchoolPassword', school });
+      if (data.error === 'AUTH_REQUIRED'){ logout(); return; }
+      if (data.success && data.password) {
+        btn.textContent = '👁 ' + data.password;
+        btn.classList.add('shown');
+        btn.dataset.shown = '1';
+        btn.disabled = false;
+        // 10초 후 자동 가림
+        btn._hideTimer = setTimeout(() => {
+          if (btn.dataset.shown === '1') {
+            btn.textContent = '👁 비번 보기';
+            btn.classList.remove('shown');
+            btn.dataset.shown = '0';
+            btn._hideTimer = null;
+          }
+        }, 10000);
+      } else {
+        btn.textContent = '👁 비번 보기';
+        btn.disabled = false;
+        const errMap = {
+          'NO_PASSWORD':    '저장된 암호문이 없습니다 (옛 등록 학교일 수 있음)',
+          'DECRYPT_FAILED': '복호화 실패 — 키가 변경됐을 수 있습니다',
+          'NO_SCHOOL':      '학교를 찾을 수 없습니다'
+        };
+        alert('비번 확인 실패: ' + (errMap[data.error] || data.error || '알 수 없는 오류'));
+      }
+    } catch (err) {
+      btn.textContent = '👁 비번 보기';
+      btn.disabled = false;
+      alert('오류: ' + err.message);
+    }
   }
 
 
