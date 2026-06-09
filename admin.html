@@ -333,6 +333,12 @@ footer{margin-top:3rem;text-align:center;font-size:12px;color:var(--faint);lette
   function escJs(s){
     return String(s == null ? '' : s).replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/"/g,'\\"');
   }
+  /* CSV 셀 안전 처리 — Excel 수식 인젝션 + 콤마/따옴표 깨짐 방어 */
+  function csvCell(v){
+    var s = String(v == null ? '' : v);
+    if (/^[=+\-@\t\r]/.test(s)) s = "'" + s;          // 수식 인젝션 차단
+    return '"' + s.replace(/"/g, '""') + '"';         // 따옴표 이스케이프 + 셀 감싸기
+  }
 
   /* ── 공통 API 래퍼: 모든 관리자 요청에 토큰 자동 첨부 ── */
   async function apiGet(params){
@@ -461,10 +467,10 @@ footer{margin-top:3rem;text-align:center;font-size:12px;color:var(--faint);lette
     grid.innerHTML = students.map((s,i) => `
       <div class="qr-card" id="qc-${i}">
         <div class="qr-box" id="qr-box-${i}"></div>
-        <div class="qr-name">${s.name}</div>
-        <div class="qr-cls">${s.className}</div>
+        <div class="qr-name">${esc(s.name)}</div>
+        <div class="qr-cls">${esc(s.className)}</div>
         <button class="qr-del" id="qdel-${i}"
-          onclick="deleteRecording(${i},'${s.fileId}','${s.name}','${s.className}')">
+          onclick="deleteRecording(${i},'${escJs(s.fileId)}','${escJs(s.name)}','${escJs(s.className)}')">
           🗑 삭제
         </button>
       </div>`).join('');
@@ -512,7 +518,8 @@ footer{margin-top:3rem;text-align:center;font-size:12px;color:var(--faint);lette
     })));
     const csvRows = [['학교','이름','학반','QR URL']];
     students.forEach(s => csvRows.push([school, s.name, s.className, makePlayUrl(s)]));
-    zip.file('학생목록.csv', '\uFEFF' + csvRows.map(r=>r.join(',')).join('\n'));
+    zip.file('학생목록.csv',
+      '\uFEFF' + csvRows.map(r => r.map(csvCell).join(',')).join('\r\n'));
     saveAs(await zip.generateAsync({type:'blob'}), school+'_QR코드.zip');
     btn.disabled = false; btn.textContent = 'ZIP 다운로드';
   }
@@ -840,9 +847,9 @@ footer{margin-top:3rem;text-align:center;font-size:12px;color:var(--faint);lette
     }
     list.innerHTML = allPasswords.map(p => `
       <label class="bulk-item">
-        <input type="checkbox" class="bulk-chk" value="${p.school.replace(/"/g,'&quot;')}"
+        <input type="checkbox" class="bulk-chk" value="${esc(p.school)}"
           onchange="updateBulkCount()" />
-        <span class="bulk-item-name">🏫 ${p.school}</span>
+        <span class="bulk-item-name">🏫 ${esc(p.school)}</span>
       </label>`).join('');
     document.getElementById('bulkAll').checked = false;
     countEl.textContent = '0개 선택됨';
