@@ -162,9 +162,9 @@ footer{margin-top:3rem;text-align:center;font-size:11px;color:var(--faint);lette
     const GAS_URL = 'https://script.google.com/macros/s/AKfycbxCIUMBHvu0YU77z4ULqrZAez6bue3cWi7Fzyg5slz-FdIY05K1EclHCRDUdcBoxXbPuQ/exec';
     const MAX_SEC = 40;
     const params  = new URLSearchParams(location.search);
-    const SHORT_CODE = params.get('c') || '';  // 짧은 코드 (카톡 링크). 있으면 resolveCode로 학교 해석
-    let SCHOOL    = decodeURIComponent(params.get('school') || '');
-    let SCHOOL_TOKEN = ''; // schoolLogin 성공 시 발급되는 학교 스코프 토큰
+    var SHORT_CODE = params.get('c') || '';  // 짧은 코드 (카톡 링크). 있으면 resolveCode로 학교 해석
+    var SCHOOL    = decodeURIComponent(params.get('school') || '');
+    var SCHOOL_TOKEN = ''; // schoolLogin 성공 시 발급되는 학교 스코프 토큰
   </script>
 
   <div class="top-header">
