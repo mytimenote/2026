@@ -164,12 +164,19 @@ footer{margin-top:3rem;text-align:center;font-size:12px;color:var(--faint);lette
   <div style="width:100%;max-width:340px;padding:32px 24px;background:#fff;border-radius:16px;box-shadow:0 8px 32px rgba(0,0,0,.12);text-align:center;">
     <div style="font-size:20px;font-weight:700;margin-bottom:6px;">관리자 로그인</div>
     <div style="font-size:13px;color:#888;margin-bottom:20px;">관리자 비밀번호를 입력하세요</div>
-    <input id="adminPw" type="password" placeholder="비밀번호" autocomplete="off"
-      onkeydown="if(event.key==='Enter')adminLogin()"
-      style="width:100%;padding:12px 14px;font-size:15px;border:1px solid #ddd;border-radius:10px;box-sizing:border-box;margin-bottom:12px;" />
+    <div style="position:relative;margin-bottom:12px;">
+      <input id="adminPw" type="password" placeholder="비밀번호" autocomplete="off"
+        onkeydown="if(event.key==='Enter')adminLogin()"
+        style="width:100%;padding:12px 44px 12px 14px;font-size:15px;border:1px solid #ddd;border-radius:10px;box-sizing:border-box;" />
+      <button type="button" onclick="togglePw()" id="pwEye"
+        style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:18px;padding:4px 8px;line-height:1;color:#888;">👁</button>
+    </div>
     <button id="loginBtn" onclick="adminLogin()"
       style="width:100%;padding:12px;font-size:15px;font-weight:600;color:#fff;background:#111;border:none;border-radius:10px;cursor:pointer;">로그인</button>
     <div id="loginErr" style="color:#d33;font-size:13px;margin-top:12px;min-height:18px;white-space:pre-line;"></div>
+    <div style="font-size:11px;color:#aaa;margin-top:16px;text-align:left;word-break:break-all;line-height:1.4;">
+      요청 대상 서버 URL:<br><span id="loginGasInfo" style="color:#777;"></span>
+    </div>
   </div>
 </div>
 
@@ -317,7 +324,7 @@ footer{margin-top:3rem;text-align:center;font-size:12px;color:var(--faint);lette
 
 <script>
   let students = [];
-  const DEFAULT_GAS   = 'https://script.google.com/macros/s/AKfycbwVuXyVUJFG2HXSnDwhovHuv9En33gaEeOkOlmpAQ8KxExQJIEj19kbtGWuYfVUNY0F0A/exec';
+  const DEFAULT_GAS   = 'https://script.google.com/macros/s/AKfycbxCIUMBHvu0YU77z4ULqrZAez6bue3cWi7Fzyg5slz-FdIY05K1EclHCRDUdcBoxXbPuQ/exec';
   const DEFAULT_PAGES = 'https://mytimenote.github.io/2026';
 
   /* ── 관리자 토큰 (메모리에만 보관; localStorage 저장 금지) ── */
@@ -352,10 +359,23 @@ footer{margin-top:3rem;text-align:center;font-size:12px;color:var(--faint);lette
   }
 
   window.onload = () => {
-    document.getElementById('gasUrl').value   = localStorage.getItem('gasUrl')   || DEFAULT_GAS;
+    // localStorage 에 저장된 옛날 URL 을 무시하고 항상 코드의 최신 URL 사용
+    localStorage.removeItem('gasUrl');
+    document.getElementById('gasUrl').value   = DEFAULT_GAS;
     document.getElementById('pagesUrl').value = localStorage.getItem('pagesUrl') || DEFAULT_PAGES;
+    // 로그인 게이트에 현재 요청이 가는 URL 을 표시
+    var u = document.getElementById('loginGasInfo');
+    if (u) u.textContent = DEFAULT_GAS;
     showLoginGate();   // 로그인 전까지 본문 잠금 (1번)
   };
+
+  /* ── 비밀번호 표시/숨김 토글 ── */
+  function togglePw(){
+    var inp = document.getElementById('adminPw');
+    var eye = document.getElementById('pwEye');
+    if (inp.type === 'password'){ inp.type = 'text';  eye.textContent = '🙈'; }
+    else                        { inp.type = 'password'; eye.textContent = '👁'; }
+  }
 
   /* ── 로그인 게이트 (1번) ── */
   function showLoginGate(){
@@ -415,9 +435,7 @@ footer{margin-top:3rem;text-align:center;font-size:12px;color:var(--faint);lette
 
   const getGasUrl   = () => document.getElementById('gasUrl').value.trim();
   const getPagesUrl = () => document.getElementById('pagesUrl').value.trim().replace(/\/$/,'');
-  const makePlayUrl = s => getPagesUrl() + '/play.html?f=' + encodeURIComponent(s.fileId)
-    + '&t=' + encodeURIComponent(s.playToken || '')
-    + '&s=' + encodeURIComponent(document.getElementById('schoolSelect').value);
+  const makePlayUrl = s => getPagesUrl() + '/play.html?c=' + encodeURIComponent(s.studentCode || '');
 
   /* ── 학교 목록 ── */
   async function loadSchools() {
@@ -443,14 +461,7 @@ footer{margin-top:3rem;text-align:center;font-size:12px;color:var(--faint);lette
       const data = await apiGet({ action:'list', school: school });
       if (data.error === 'AUTH_REQUIRED'){ logout(); return; }
       students   = data.students || [];
-      // 각 학생의 play 토큰 발급 (QR URL에 내장) — 2·8번
-      document.getElementById('loadingRow').querySelector('span')?.replaceChildren?.();
-      await Promise.all(students.map(async s => {
-        try {
-          const t = await apiGet({ action:'playToken', school: school, f: s.fileId });
-          s.playToken = (t && t.ok) ? t.token : '';
-        } catch { s.playToken = ''; }
-      }));
+      // studentCode는 list 응답에 이미 포함됨 (QR URL에 사용)
       document.getElementById('loadingRow').style.display    = 'none';
       document.getElementById('resultSection').style.display = 'block';
       document.getElementById('statCount').textContent  = students.length + '명';
@@ -595,7 +606,11 @@ footer{margin-top:3rem;text-align:center;font-size:12px;color:var(--faint);lette
       <div class="pw-row" id="pwrow-${encSc}">
         <div class="pw-row-top">
           <span class="pw-school">🏫 ${schoolDisp}</span>
-          <span class="pw-value" id="pwval-${encSc}">${p.hasPassword?'🔒 설정됨':'⚠ 미설정'}</span>
+          <span class="pw-value" id="pwval-${encSc}">${
+            p.password
+              ? `<span class="pw-dot" id="pwdot-${encSc}">••••••</span><span class="pw-plain" id="pwplain-${encSc}" style="display:none">${esc(p.password)}</span> <span class="pw-eye" onclick="toggleSchoolPw('${encSc}')" style="cursor:pointer;user-select:none" title="비밀번호 보기/숨기기">👁</span>`
+              : (p.hasPassword ? '🔒 설정됨 (재저장 필요)' : '⚠ 미설정')
+          }</span>
         </div>
         <div class="pw-dates" id="pddates-${encSc}">${dateStr}</div>
         <div class="pw-actions">
@@ -726,13 +741,26 @@ footer{margin-top:3rem;text-align:center;font-size:12px;color:var(--faint);lette
     } catch(err) { showMsg('pwDelErr','오류: '+err.message); if(row) row.querySelector('.pw-del').disabled=false; }
   }
 
+  /* ── 학교 비밀번호 보기/숨기기 ── */
+  function toggleSchoolPw(encSc) {
+    const dot   = document.getElementById('pwdot-' + encSc);
+    const plain = document.getElementById('pwplain-' + encSc);
+    if (!dot || !plain) return;
+    const show = plain.style.display === 'none';
+    plain.style.display = show ? '' : 'none';
+    dot.style.display   = show ? 'none' : '';
+  }
+
   /* ── 링크 공유 ── */
   function buildShareMsg(school) {
     const p = allPasswords.find(x => x.school === school) || {};
-    const recordUrl = getPagesUrl() + '/record.html?school=' + encodeURIComponent(school);
+    const recordUrl = p.schoolCode
+      ? getPagesUrl() + '/record.html?c=' + encodeURIComponent(p.schoolCode)
+      : getPagesUrl() + '/record.html?school=' + encodeURIComponent(school);
     let msg = `🎓 ${school} 졸업 음성 메시지 녹음 안내\n\n`;
     msg += `📎 녹음 링크\n${recordUrl}\n`;
-    if (p.hasPassword) msg += `\n🔒 비밀번호: (학교에 별도 전달한 비밀번호)`;
+    if (p.password) msg += `\n🔒 비밀번호: ${p.password}`;
+    else if (p.hasPassword) msg += `\n🔒 비밀번호: (학교에 별도 전달한 비밀번호)`;
     if (p.startDate || p.endDate) msg += `\n\n📅 녹음 기간\n${p.startDate||'?'} ~ ${p.endDate||'?'}`;
     return msg;
   }
@@ -819,13 +847,9 @@ footer{margin-top:3rem;text-align:center;font-size:12px;color:var(--faint);lette
       const data = await apiPost({ action:'registerSchool', school, password:newPw, startDate:start, endDate:end });
       if (data.error === 'AUTH_REQUIRED'){ logout(); return; }
       if (data.success) {
-        // 비번은 화면에 표시하지 않음 (평문 노출 차단)
-        const valEl = document.getElementById('pwval-' + encSc);
-        if (valEl) valEl.textContent = '🔒 설정됨';
-        const cached = allPasswords.find(p => p.school === school);
-        if (cached) cached.hasPassword = true;
         document.getElementById('pwch-' + encSc)?.classList.remove('open');
         showMsg('pwDelOk', '✓ ' + school + ' 비밀번호가 변경됐습니다.');
+        loadPasswords();  // 목록 새로고침 → 변경된 비번 즉시 표시
       } else {
         if (errEl) errEl.textContent = '변경 실패: ' + (data.error || '');
         if (btn) btn.disabled = false;

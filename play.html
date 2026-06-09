@@ -176,7 +176,7 @@ footer{margin-top:2.5rem;text-align:center;font-size:12px;color:var(--faint);let
    MP3 파일 기반 재생 · 저작권 없는 연주 녹음
 ════════════════════════════════════════════════ */
 const BGM = (() => {
-  const TARGET_VOL = 0.22; // 목소리가 메인이므로 BGM은 배경 수준 (~22%)
+  const TARGET_VOL = 0.40; // 목소리가 메인이므로 BGM은 배경 수준 (~40%)
   const BGM_SRC    = './bgm_salut.mp3?v=20260508';
 
   /* ══════════════════════════════════════════════
@@ -395,11 +395,12 @@ const BGM = (() => {
 
 /* ════════════════════════════════════ */
 
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbwVuXyVUJFG2HXSnDwhovHuv9En33gaEeOkOlmpAQ8KxExQJIEj19kbtGWuYfVUNY0F0A/exec';
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbxCIUMBHvu0YU77z4ULqrZAez6bue3cWi7Fzyg5slz-FdIY05K1EclHCRDUdcBoxXbPuQ/exec';
 const _qp      = new URLSearchParams(location.search);
-const fileId   = _qp.get('f') || '';
-const playToken= _qp.get('t') || '';   // 서명된 재생 토큰 (admin이 QR에 포함)
-const playSchool = _qp.get('s') || ''; // 학교 (토큰 검증 대상)
+const shortCode = _qp.get('c') || '';  // 짧은 코드 (QR에 포함). 있으면 resolveCode로 해석
+let fileId     = _qp.get('f') || '';
+let playToken  = _qp.get('t') || '';   // 서명된 재생 토큰
+let playSchool = _qp.get('s') || '';   // 학교
 
 const overlay    = document.getElementById('overlay');
 const ovSchool   = document.getElementById('ovSchool');
@@ -426,14 +427,30 @@ const policyNote = document.getElementById('policyNote');
 let verifiedName='', verifiedSchool='', rawBlob=null, audioMime='audio/webm';
 let audioReady=false, userTouched=false, dlEnabled=true;
 
-/* ── 잘못된 URL ── */
-if (!fileId || !playToken || !playSchool) {
+/* ── 진입: 짧은 코드(c) 우선 해석 → 없으면 기존 f/t/s 방식 ── */
+function showBadQr() {
   ovLoading.style.display = 'none';
   ovSchool.textContent    = '잘못된 QR코드';
   ovStudent.textContent   = '올바른 QR코드를 스캔해 주세요';
-} else {
+}
+async function initPlay() {
+  if (shortCode) {
+    try {
+      const r = await fetchWithTimeout(GAS_URL + '?action=resolveCode&c=' + encodeURIComponent(shortCode), 15000);
+      const d = await r.json();
+      if (d.ok && d.type === 'student' && d.fileId && d.t) {
+        fileId = d.fileId; playToken = d.t; playSchool = d.school;
+        loadAudio();
+        return;
+      }
+    } catch (e) {}
+    showBadQr();
+    return;
+  }
+  if (!fileId || !playToken || !playSchool) { showBadQr(); return; }
   loadAudio();
 }
+initPlay();
 
 /* ── 타임아웃 fetch 헬퍼 ── */
 async function fetchWithTimeout(url, ms) {
@@ -830,11 +847,11 @@ async function mixAndConvertToMp3(blob) {
   const bgmL   = bgmBuffer ? bgmBuffer.getChannelData(0) : empty;
   const bgmR   = bgmBuffer && bgmBuffer.numberOfChannels > 1 ? bgmBuffer.getChannelData(1) : bgmL;
 
-  /* 믹싱: 음성 100% + BGM 35% (클리핑 방지) */
+  /* 믹싱: 음성 100% + BGM 55% (클리핑 방지) */
   const len    = voiceBuffer.length;
   const mixedL = new Float32Array(len);
   const mixedR = new Float32Array(len);
-  const BGM_GAIN = .35;
+  const BGM_GAIN = .55;
   for (let i = 0; i < len; i++) {
     mixedL[i] = Math.max(-1, Math.min(1, voiceL[i] + (bgmL[i] || 0) * BGM_GAIN));
     mixedR[i] = Math.max(-1, Math.min(1, voiceR[i] + (bgmR[i] || 0) * BGM_GAIN));
