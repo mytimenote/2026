@@ -37,6 +37,10 @@ body{min-height:100vh;background:var(--bg);font-family:'Noto Sans KR',sans-serif
 .tab-content.active{display:block;animation:fadeIn .3s ease both}
 .card{background:var(--card);border-radius:16px;padding:1.5rem;margin-bottom:.75rem;box-shadow:var(--shadow)}
 .card-title{font-size:13px;font-weight:600;color:var(--sub);margin-bottom:1.125rem}
+.card-toggle{cursor:pointer;display:flex;align-items:center;justify-content:space-between;user-select:none}
+.card-toggle::after{content:'▾';font-size:11px;color:var(--muted);transition:transform .2s ease}
+.card-toggle.collapsed{margin-bottom:0}
+.card-toggle.collapsed::after{transform:rotate(-90deg)}
 .field{margin-bottom:.875rem}
 .field:last-of-type{margin-bottom:0}
 .lbl{display:block;font-size:12px;font-weight:500;color:var(--muted);margin-bottom:.4rem}
@@ -221,7 +225,8 @@ footer{margin-top:3rem;text-align:center;font-size:12px;color:var(--faint);lette
   <!-- ── 비밀번호 관리 탭 ── -->
   <div class="tab-content" id="tab-pw">
     <div class="card">
-      <div class="card-title">학교 설정 (비밀번호 + 녹음 기간)</div>
+      <div class="card-title card-toggle" onclick="toggleCard(this)">학교 설정 (비밀번호 + 녹음 기간)</div>
+      <div class="card-body">
       <div class="field">
         <label class="lbl">학교 이름</label>
         <input id="pwSchool" type="text" placeholder="예: ○○초등학교" />
@@ -244,10 +249,12 @@ footer{margin-top:3rem;text-align:center;font-size:12px;color:var(--faint);lette
       </div>
       <div class="alert err" id="pwErr"></div>
       <div class="alert ok"  id="pwOk"></div>
+      </div>
     </div>
 
     <div class="card">
-      <div class="card-title">설정된 학교 목록</div>
+      <div class="card-title card-toggle" onclick="toggleCard(this)">설정된 학교 목록</div>
+      <div class="card-body">
       <p style="font-size:12px;color:var(--muted);line-height:1.8;margin-bottom:.75rem">
         <strong style="color:var(--green)">⬇ 다운 ON</strong> = MP3 저장 허용 &nbsp;·&nbsp;
         <strong style="color:var(--red)">⬇ 다운 OFF</strong> = 저장 버튼 숨김<br>
@@ -267,11 +274,13 @@ footer{margin-top:3rem;text-align:center;font-size:12px;color:var(--faint);lette
       </div>
       <div class="alert err" id="pwDelErr" style="margin-top:.75rem"></div>
       <div class="alert ok"  id="pwDelOk"  style="margin-top:.75rem"></div>
+      </div>
     </div>
 
     <!-- ── 일괄삭제 카드 ── -->
     <div class="card" style="border:1.5px solid var(--red-bd)">
-      <div class="card-title" style="color:var(--red)">🗑 연도 마감 — 학교 일괄삭제</div>
+      <div class="card-title card-toggle collapsed" style="color:var(--red)" onclick="toggleCard(this)">🗑 연도 마감 — 학교 일괄삭제</div>
+      <div class="card-body" style="display:none">
       <p style="font-size:12px;color:var(--muted);line-height:1.9;margin-bottom:.875rem">
         음성 파일(Drive)은 그대로 보존되며, 시트 데이터와 비밀번호만 삭제돼요.<br>
         삭제 후에도 <strong>QR 재생은 계속 작동</strong>합니다.
@@ -288,6 +297,7 @@ footer{margin-top:3rem;text-align:center;font-size:12px;color:var(--faint);lette
       </div>
       <div class="alert err" id="bulkErr" style="margin-top:.75rem"></div>
       <div class="alert ok"  id="bulkOk"  style="margin-top:.75rem"></div>
+      </div>
     </div>
 
     <div class="card" style="background:var(--pri-bg);border:1.5px solid rgba(49,130,246,.2)">
@@ -340,6 +350,13 @@ footer{margin-top:3rem;text-align:center;font-size:12px;color:var(--faint);lette
       .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
   }
   /* 따옴표 안전 인라인 핸들러용 (onclick 등 JS 문자열 컨텍스트) */
+  /* ── 카드 접기/펼치기 토글 ── */
+  function toggleCard(el) {
+    el.classList.toggle('collapsed');
+    var body = el.nextElementSibling;
+    if (body) body.style.display = body.style.display === 'none' ? '' : 'none';
+  }
+
   function escJs(s){
     return String(s == null ? '' : s).replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/"/g,'\\"');
   }
