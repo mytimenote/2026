@@ -768,7 +768,7 @@ footer{margin-top:3rem;text-align:center;font-size:12px;color:var(--faint);lette
     // 학교 단축 코드(schoolCode) 있으면 단축 URL, 없으면 기존 ?school=학교명 폴백
     const sCode = p.schoolCode || p.code;
     const recordUrl = sCode
-      ? getPagesUrl() + '/record.html?c=' + encodeURIComponent(sCode)
+      ? getPagesUrl() + '/record.html?c=' + encodeURIComponent(sCode) + '&school=' + encodeURIComponent(school)
       : getPagesUrl() + '/record.html?school=' + encodeURIComponent(school);
     let msg = `🎓 ${school} 졸업 음성 메시지 녹음 안내\n\n`;
     msg += `📎 녹음 링크\n${recordUrl}\n`;
