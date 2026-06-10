@@ -491,7 +491,7 @@ async function fetchWithTimeout(url, ms) {
   const ctrl = new AbortController();
   const tid  = setTimeout(() => ctrl.abort(), ms);
   try {
-    const res = await fetch(url, { signal: ctrl.signal });
+    const res = await fetch(url, { signal: ctrl.signal, redirect: 'follow' });
     clearTimeout(tid);
     return res;
   } catch(e) {
@@ -528,11 +528,17 @@ async function loadAudio() {
         + '&t=' + encodeURIComponent(playToken)
         + '&s=' + encodeURIComponent(playSchool), 30000
     );
-    const data = await res.json();
+    if (!res.ok) throw new Error('서버 응답 오류: HTTP ' + res.status);
+    const rawText = await res.text();
+    let data;
+    try { data = JSON.parse(rawText); }
+    catch(e) { throw new Error('서버 응답을 해석할 수 없습니다. (JSON 파싱 실패)'); }
     if (data && data.error === 'AUTH_REQUIRED')
       throw new Error('재생 링크가 만료되었거나 올바르지 않습니다');
     if (!data || !data.ok)
       throw new Error((data && data.error) || '파일 정보를 불러올 수 없습니다');
+    if (!data.b64 || data.b64.length < 100)
+      throw new Error('음성 데이터가 비어있습니다. 파일이 정상적으로 업로드되었는지 확인해 주세요.');
 
     applyInfo(data.school, data.name, data.className, data.downloadEnabled);
 
@@ -600,6 +606,10 @@ player.addEventListener('error', (e) => {
     ovSchool.textContent    = '재생 준비 실패';
     ovStudent.textContent   = '새로고침 후 다시 시도해 주세요';
     document.getElementById('ovRetry').style.display = 'block';
+  } else {
+    statusMsg.className='status err';
+    statusMsg.textContent='음성 재생 중 오류가 발생했습니다.';
+    playBtn.disabled=true;
   }
 });
 
@@ -681,9 +691,6 @@ seekBar.addEventListener('change', () => { player.currentTime=(seekBar.value/100
 
 player.addEventListener('play',  () => { wave.className='waveform playing'; playBtn.textContent='■'; statusMsg.textContent='재생 중…'; BGM.resume(); });
 player.addEventListener('pause', () => { wave.className='waveform'; playBtn.textContent='▶'; statusMsg.textContent=''; BGM.pause(); });
-player.addEventListener('error', () => {
-  if (audioReady) { statusMsg.className='status err'; statusMsg.textContent='음성 재생 중 오류가 발생했습니다.'; playBtn.disabled=true; }
-});
 
 /* ── 재생 종료 → 완료 화면 ── */
 player.addEventListener('ended', () => {
