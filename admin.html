@@ -443,7 +443,7 @@ footer{margin-top:3rem;text-align:center;font-size:12px;color:var(--faint);lette
   const getPagesUrl = () => document.getElementById('pagesUrl').value.trim().replace(/\/$/,'');
   /* QR URL 생성 — 짧은 코드(c) 있으면 단축 URL, 없으면 기존 f/t/s 방식 (안전 폴백) */
   const makePlayUrl = s => {
-    const code = s.code || s.shortCode || s.c;
+    const code = s.studentCode || s.code || s.shortCode || s.c;
     if (code) {
       return getPagesUrl() + '/play.html?c=' + encodeURIComponent(code);
     }
@@ -769,7 +769,11 @@ footer{margin-top:3rem;text-align:center;font-size:12px;color:var(--faint);lette
   /* ── 링크 공유 ── */
   function buildShareMsg(school) {
     const p = allPasswords.find(x => x.school === school) || {};
-    const recordUrl = getPagesUrl() + '/record.html?school=' + encodeURIComponent(school);
+    // 학교 단축 코드(schoolCode) 있으면 단축 URL, 없으면 기존 ?school=학교명 폴백
+    const sCode = p.schoolCode || p.code;
+    const recordUrl = sCode
+      ? getPagesUrl() + '/record.html?c=' + encodeURIComponent(sCode)
+      : getPagesUrl() + '/record.html?school=' + encodeURIComponent(school);
     let msg = `🎓 ${school} 졸업 음성 메시지 녹음 안내\n\n`;
     msg += `📎 녹음 링크\n${recordUrl}\n`;
     if (p.hasPassword) {
