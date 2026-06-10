@@ -441,15 +441,19 @@ footer{margin-top:3rem;text-align:center;font-size:12px;color:var(--faint);lette
 
   const getGasUrl   = () => document.getElementById('gasUrl').value.trim();
   const getPagesUrl = () => document.getElementById('pagesUrl').value.trim().replace(/\/$/,'');
-  /* QR URL 생성 — 짧은 코드(c) 있으면 단축 URL, 없으면 기존 f/t/s 방식 (안전 폴백) */
+  /* QR URL 생성 — 짧은 코드(c) + f/t/s 폴백 항상 포함 (resolveCode 실패 대비) */
   const makePlayUrl = s => {
-    const code = s.studentCode || s.code || s.shortCode || s.c;
+    const code   = s.studentCode || s.code || s.shortCode || s.c;
+    const school = document.getElementById('schoolSelect').value;
+    const fts    = '&f=' + encodeURIComponent(s.fileId || '')
+                 + '&t=' + encodeURIComponent(s.playToken || '')
+                 + '&s=' + encodeURIComponent(school);
     if (code) {
-      return getPagesUrl() + '/play.html?c=' + encodeURIComponent(code);
+      return getPagesUrl() + '/play.html?c=' + encodeURIComponent(code) + fts;
     }
-    return getPagesUrl() + '/play.html?f=' + encodeURIComponent(s.fileId)
+    return getPagesUrl() + '/play.html?f=' + encodeURIComponent(s.fileId || '')
       + '&t=' + encodeURIComponent(s.playToken || '')
-      + '&s=' + encodeURIComponent(document.getElementById('schoolSelect').value);
+      + '&s=' + encodeURIComponent(school);
   };
 
   /* ── 학교 목록 ── */

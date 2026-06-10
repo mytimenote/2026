@@ -450,15 +450,29 @@ function showBadQr() {
 }
 async function initPlay() {
   if (shortCode) {
-    try {
-      const r = await fetchWithTimeout(GAS_URL + '?action=resolveCode&c=' + encodeURIComponent(shortCode), 15000);
-      const d = await r.json();
-      if (d.ok && d.type === 'student' && d.fileId && d.t) {
-        fileId = d.fileId; playToken = d.t; playSchool = d.school;
-        loadAudio();
-        return;
+    // resolveCode 시도 (GAS 콜드스타트 대비 최대 2회)
+    for (var _try = 0; _try < 2; _try++) {
+      try {
+        if (_try > 0) await new Promise(function(ok){ setTimeout(ok, 1500); });
+        var r = await fetchWithTimeout(GAS_URL + '?action=resolveCode&c=' + encodeURIComponent(shortCode), 15000);
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        var text = await r.text();
+        var d = JSON.parse(text);
+        if (d.ok && d.type === 'student' && d.fileId && d.t) {
+          fileId = d.fileId; playToken = d.t; playSchool = d.school;
+          loadAudio();
+          return;
+        }
+      } catch (e) {
+        console.warn('[initPlay] resolveCode 시도 ' + (_try+1) + ' 실패:', e && e.message);
       }
-    } catch (e) {}
+    }
+    // resolveCode 실패 → URL의 f/t/s 폴백 파라미터 확인
+    if (fileId && playToken && playSchool) {
+      console.log('[initPlay] resolveCode 실패 → f/t/s 폴백 사용');
+      loadAudio();
+      return;
+    }
     showBadQr();
     return;
   }
