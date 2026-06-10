@@ -517,8 +517,28 @@ function applyInfo(school, name, cls, dl) {
    (Drive 직접 스트림 불필요 — GAS가 b64로 반환)
 ════════════════════════════════════════════ */
 
+// canplay 대기 타이머 — 브라우저가 canplay를 끝내 발화하지 않을 때 에러 표시
+let _canplayTimer = null;
+function _clearCanplayTimer() {
+  if (_canplayTimer) { clearTimeout(_canplayTimer); _canplayTimer = null; }
+}
+function _startCanplayTimer() {
+  _clearCanplayTimer();
+  _canplayTimer = setTimeout(function() {
+    // 20초 경과해도 canplay 미발화 → 에러로 처리
+    if (!audioReady) {
+      console.error('[loadAudio] canplay timeout — 브라우저가 오디오를 디코딩하지 못함');
+      ovLoading.style.display = 'none';
+      ovSchool.textContent    = '음성을 불러올 수 없습니다';
+      ovStudent.textContent   = '파일 형식이 지원되지 않거나 네트워크 오류입니다';
+      document.getElementById('ovRetry').style.display = 'block';
+    }
+  }, 20000);
+}
+
 async function loadAudio() {
   audioReady = false;
+  _clearCanplayTimer();
   try {
     ovLoading.innerHTML = '<span class="ov-spin"></span>음성 정보 확인 중…';
 
@@ -532,7 +552,7 @@ async function loadAudio() {
     const rawText = await res.text();
     let data;
     try { data = JSON.parse(rawText); }
-    catch(e) { throw new Error('서버 응답을 해석할 수 없습니다. (JSON 파싱 실패)'); }
+    catch(e) { throw new Error('서버 응답을 해석할 수 없습니다. (JSON 파싱 실패)\n' + rawText.slice(0,120)); }
     if (data && data.error === 'AUTH_REQUIRED')
       throw new Error('재생 링크가 만료되었거나 올바르지 않습니다');
     if (!data || !data.ok)
@@ -546,11 +566,14 @@ async function loadAudio() {
 
     // b64 → Blob URL 변환
     const mime   = data.mime || 'audio/webm';
-    const binary = atob(data.b64);
+    let binary;
+    try { binary = atob(data.b64); }
+    catch(e) { throw new Error('음성 데이터 디코딩 실패 (Base64 오류). 서버를 확인해 주세요.'); }
     const bytes  = new Uint8Array(binary.length);
     for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
     rawBlob   = new Blob([bytes], { type: mime });
     audioMime = mime;
+    console.log('[loadAudio] blob ready', mime, (rawBlob.size/1024).toFixed(0)+'KB');
 
     // 기존 ObjectURL 해제 후 새로 세팅
     if (player.src && player.src.startsWith('blob:')) {
@@ -559,8 +582,12 @@ async function loadAudio() {
     player.src = URL.createObjectURL(rawBlob);
     player.load();
 
+    // canplay가 20초 내에 오지 않으면 에러 표시
+    _startCanplayTimer();
+
   } catch(err) {
     console.error('[loadAudio]', err);
+    _clearCanplayTimer();
     ovLoading.style.display = 'none';
     const isTimeout = err.name === 'AbortError';
     ovSchool.textContent  = isTimeout ? '연결 시간 초과' : '불러오기 실패';
@@ -572,6 +599,7 @@ async function loadAudio() {
 }
 
 function retryLoad() {
+  _clearCanplayTimer();
   document.getElementById('ovRetry').style.display = 'none';
   ovLoading.innerHTML     = '<span class="ov-spin"></span>불러오는 중…';
   ovLoading.style.display = 'flex';
@@ -589,6 +617,7 @@ function retryLoad() {
 player.addEventListener('canplay', () => {
   if (audioReady) return; // 중복 호출 방지 (재시도 시에도 안전)
   console.log('[canplay] audio ready');
+  _clearCanplayTimer(); // 타임아웃 가드 해제
   audioReady             = true;
   seekWrap.style.display = 'block';
   playBtn.disabled       = false;
@@ -601,6 +630,7 @@ player.addEventListener('canplay', () => {
 /* ── audio error: 로딩 실패 시 에러 표시 ── */
 player.addEventListener('error', (e) => {
   console.error('[player error]', player.error);
+  _clearCanplayTimer();
   if (!audioReady) {
     ovLoading.style.display = 'none';
     ovSchool.textContent    = '재생 준비 실패';
