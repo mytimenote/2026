@@ -450,10 +450,12 @@ function showBadQr() {
 }
 async function initPlay() {
   if (shortCode) {
-    // resolveCode 시도 (GAS 콜드스타트 대비 최대 2회)
-    for (var _try = 0; _try < 2; _try++) {
+    var DELAYS = [0, 2000, 4000];  // 재시도 간격: 즉시, 2초, 4초
+    var MSGS   = ['음성을 불러오는 중…', '서버 연결 중… 잠시만 기다려주세요', '거의 다 됐어요… 조금만 기다려주세요'];
+    for (var _try = 0; _try < DELAYS.length; _try++) {
       try {
-        if (_try > 0) await new Promise(function(ok){ setTimeout(ok, 1500); });
+        ovLoading.innerHTML = '<span class="ov-spin"></span>' + MSGS[_try];
+        if (DELAYS[_try] > 0) await new Promise(function(ok){ setTimeout(ok, DELAYS[_try]); });
         var r = await fetchWithTimeout(GAS_URL + '?action=resolveCode&c=' + encodeURIComponent(shortCode), 15000);
         if (!r.ok) throw new Error('HTTP ' + r.status);
         var text = await r.text();
@@ -463,17 +465,20 @@ async function initPlay() {
           loadAudio();
           return;
         }
+        // 확정 오류 — 재시도해도 같은 결과이므로 즉시 중단
+        if (d.error === 'INVALID_CODE' || d.error === 'NO_FILE' || d.error === 'NO_SCHOOL') {
+          console.warn('[initPlay] 확정 오류:', d.error);
+          break;
+        }
       } catch (e) {
-        console.warn('[initPlay] resolveCode 시도 ' + (_try+1) + ' 실패:', e && e.message);
+        console.warn('[initPlay] resolveCode 시도 ' + (_try+1) + '/' + DELAYS.length + ' 실패:', e && e.message);
       }
     }
-    // resolveCode 실패 → URL의 f/t/s 폴백 파라미터 확인
-    if (fileId && playToken && playSchool) {
-      console.log('[initPlay] resolveCode 실패 → f/t/s 폴백 사용');
-      loadAudio();
-      return;
-    }
-    showBadQr();
+    // 모든 시도 실패 — "다시 시도" 버튼 표시
+    ovLoading.style.display = 'none';
+    ovSchool.textContent  = '음성을 불러올 수 없습니다';
+    ovStudent.textContent = '네트워크를 확인하고 다시 시도해 주세요';
+    document.getElementById('ovRetry').style.display = 'block';
     return;
   }
   if (!fileId || !playToken || !playSchool) { showBadQr(); return; }
@@ -569,6 +574,8 @@ function retryLoad() {
   ovHint.style.display    = 'none';
   rawBlob    = null;
   audioReady = false;
+  // shortCode가 있고 아직 미해석이면 resolveCode부터 재시도
+  if (shortCode && !fileId) { initPlay(); return; }
   loadAudio();
 }
 

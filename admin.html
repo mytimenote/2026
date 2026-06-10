@@ -441,19 +441,15 @@ footer{margin-top:3rem;text-align:center;font-size:12px;color:var(--faint);lette
 
   const getGasUrl   = () => document.getElementById('gasUrl').value.trim();
   const getPagesUrl = () => document.getElementById('pagesUrl').value.trim().replace(/\/$/,'');
-  /* QR URL 생성 — 짧은 코드(c) + f/t/s 폴백 항상 포함 (resolveCode 실패 대비) */
+  /* QR URL 생성 — 짧은 코드(c)로 단순 QR, 없으면 기존 f/t/s 폴백 */
   const makePlayUrl = s => {
-    const code   = s.studentCode || s.code || s.shortCode || s.c;
-    const school = document.getElementById('schoolSelect').value;
-    const fts    = '&f=' + encodeURIComponent(s.fileId || '')
-                 + '&t=' + encodeURIComponent(s.playToken || '')
-                 + '&s=' + encodeURIComponent(school);
+    const code = s.studentCode || s.code || s.shortCode || s.c;
     if (code) {
-      return getPagesUrl() + '/play.html?c=' + encodeURIComponent(code) + fts;
+      return getPagesUrl() + '/play.html?c=' + encodeURIComponent(code);
     }
     return getPagesUrl() + '/play.html?f=' + encodeURIComponent(s.fileId || '')
       + '&t=' + encodeURIComponent(s.playToken || '')
-      + '&s=' + encodeURIComponent(school);
+      + '&s=' + encodeURIComponent(document.getElementById('schoolSelect').value);
   };
 
   /* ── 학교 목록 ── */
