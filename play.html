@@ -450,39 +450,81 @@ function showBadQr() {
 }
 async function initPlay() {
   if (shortCode) {
-    var DELAYS = [0, 2000, 4000];  // 재시도 간격: 즉시, 2초, 4초
-    var MSGS   = ['음성을 불러오는 중…', '서버 연결 중… 잠시만 기다려주세요', '거의 다 됐어요… 조금만 기다려주세요'];
-    for (var _try = 0; _try < DELAYS.length; _try++) {
+    var MSGS = ['음성을 불러오는 중…', '서버 연결 중… 잠시만 기다려주세요', '거의 다 됐어요… 조금만 기다려주세요'];
+    // ── 1차: playQr (POST 1회로 코드 해석 + 오디오 수신) ──
+    for (var _try = 0; _try < 3; _try++) {
       try {
+        if (_try > 0) await new Promise(function(ok){ setTimeout(ok, 2000 * _try); });
         ovLoading.innerHTML = '<span class="ov-spin"></span>' + MSGS[_try];
-        if (DELAYS[_try] > 0) await new Promise(function(ok){ setTimeout(ok, DELAYS[_try]); });
-        var r = await fetchWithTimeout(GAS_URL + '?action=resolveCode&c=' + encodeURIComponent(shortCode), 15000);
-        if (!r.ok) throw new Error('HTTP ' + r.status);
+        var r = await fetchPost({ action:'playQr', c: shortCode }, 30000);
         var text = await r.text();
         var d = JSON.parse(text);
-        if (d.ok && d.type === 'student' && d.fileId && d.t) {
-          fileId = d.fileId; playToken = d.t; playSchool = d.school;
-          loadAudio();
+        // 구버전 GAS(playQr 미구현) → GET 폴백
+        if (d.error === '알 수 없는 요청') { return initPlayGetFallback(); }
+        if (d.ok && d.b64) {
+          applyInfo(d.school, d.name, d.className, d.downloadEnabled);
+          var mime   = d.mime || 'audio/webm';
+          var binary = atob(d.b64);
+          var bytes  = new Uint8Array(binary.length);
+          for (var i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+          rawBlob   = new Blob([bytes], { type: mime });
+          audioMime = mime;
+          if (player.src && player.src.startsWith('blob:')) URL.revokeObjectURL(player.src);
+          player.src = URL.createObjectURL(rawBlob);
+          player.load();
           return;
         }
-        // 확정 오류 — 재시도해도 같은 결과이므로 즉시 중단
         if (d.error === 'INVALID_CODE' || d.error === 'NO_FILE' || d.error === 'NO_SCHOOL') {
-          console.warn('[initPlay] 확정 오류:', d.error);
-          break;
+          console.warn('[playQr] 확정 오류:', d.error); break;
         }
       } catch (e) {
-        console.warn('[initPlay] resolveCode 시도 ' + (_try+1) + '/' + DELAYS.length + ' 실패:', e && e.message);
+        console.warn('[playQr] 시도 ' + (_try+1) + '/3 실패:', e && e.message);
       }
     }
-    // 모든 시도 실패 — "다시 시도" 버튼 표시
     ovLoading.style.display = 'none';
     ovSchool.textContent  = '음성을 불러올 수 없습니다';
     ovStudent.textContent = '네트워크를 확인하고 다시 시도해 주세요';
     document.getElementById('ovRetry').style.display = 'block';
     return;
   }
+  // shortCode 없이 f/t/s 직접 접근
   if (!fileId || !playToken || !playSchool) { showBadQr(); return; }
   loadAudio();
+}
+
+// POST 헬퍼 — record.html과 동일한 방식 (모바일 안정)
+async function fetchPost(data, ms) {
+  var ctrl = new AbortController();
+  var tid  = setTimeout(function(){ ctrl.abort(); }, ms || 30000);
+  try {
+    var res = await fetch(GAS_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(data),
+      redirect: 'follow',
+      signal: ctrl.signal
+    });
+    clearTimeout(tid);
+    return res;
+  } catch (e) { clearTimeout(tid); throw e; }
+}
+
+// GET 폴백 (Code.gs 구버전 호환)
+async function initPlayGetFallback() {
+  try {
+    ovLoading.innerHTML = '<span class="ov-spin"></span>호환 모드로 연결 중…';
+    var r = await fetchWithTimeout(GAS_URL + '?action=resolveCode&c=' + encodeURIComponent(shortCode), 20000);
+    var d = await r.json();
+    if (d.ok && d.type === 'student' && d.fileId && d.t) {
+      fileId = d.fileId; playToken = d.t; playSchool = d.school;
+      loadAudio();
+      return;
+    }
+  } catch (e) { console.warn('[GET fallback]', e && e.message); }
+  ovLoading.style.display = 'none';
+  ovSchool.textContent  = '음성을 불러올 수 없습니다';
+  ovStudent.textContent = '다시 시도해 주세요';
+  document.getElementById('ovRetry').style.display = 'block';
 }
 initPlay();
 
@@ -491,7 +533,7 @@ async function fetchWithTimeout(url, ms) {
   const ctrl = new AbortController();
   const tid  = setTimeout(() => ctrl.abort(), ms);
   try {
-    const res = await fetch(url, { signal: ctrl.signal, redirect: 'follow' });
+    const res = await fetch(url, { signal: ctrl.signal });
     clearTimeout(tid);
     return res;
   } catch(e) {
@@ -517,28 +559,8 @@ function applyInfo(school, name, cls, dl) {
    (Drive 직접 스트림 불필요 — GAS가 b64로 반환)
 ════════════════════════════════════════════ */
 
-// canplay 대기 타이머 — 브라우저가 canplay를 끝내 발화하지 않을 때 에러 표시
-let _canplayTimer = null;
-function _clearCanplayTimer() {
-  if (_canplayTimer) { clearTimeout(_canplayTimer); _canplayTimer = null; }
-}
-function _startCanplayTimer() {
-  _clearCanplayTimer();
-  _canplayTimer = setTimeout(function() {
-    // 20초 경과해도 canplay 미발화 → 에러로 처리
-    if (!audioReady) {
-      console.error('[loadAudio] canplay timeout — 브라우저가 오디오를 디코딩하지 못함');
-      ovLoading.style.display = 'none';
-      ovSchool.textContent    = '음성을 불러올 수 없습니다';
-      ovStudent.textContent   = '파일 형식이 지원되지 않거나 네트워크 오류입니다';
-      document.getElementById('ovRetry').style.display = 'block';
-    }
-  }, 20000);
-}
-
 async function loadAudio() {
   audioReady = false;
-  _clearCanplayTimer();
   try {
     ovLoading.innerHTML = '<span class="ov-spin"></span>음성 정보 확인 중…';
 
@@ -548,17 +570,11 @@ async function loadAudio() {
         + '&t=' + encodeURIComponent(playToken)
         + '&s=' + encodeURIComponent(playSchool), 30000
     );
-    if (!res.ok) throw new Error('서버 응답 오류: HTTP ' + res.status);
-    const rawText = await res.text();
-    let data;
-    try { data = JSON.parse(rawText); }
-    catch(e) { throw new Error('서버 응답을 해석할 수 없습니다. (JSON 파싱 실패)\n' + rawText.slice(0,120)); }
+    const data = await res.json();
     if (data && data.error === 'AUTH_REQUIRED')
       throw new Error('재생 링크가 만료되었거나 올바르지 않습니다');
     if (!data || !data.ok)
       throw new Error((data && data.error) || '파일 정보를 불러올 수 없습니다');
-    if (!data.b64 || data.b64.length < 100)
-      throw new Error('음성 데이터가 비어있습니다. 파일이 정상적으로 업로드되었는지 확인해 주세요.');
 
     applyInfo(data.school, data.name, data.className, data.downloadEnabled);
 
@@ -566,14 +582,11 @@ async function loadAudio() {
 
     // b64 → Blob URL 변환
     const mime   = data.mime || 'audio/webm';
-    let binary;
-    try { binary = atob(data.b64); }
-    catch(e) { throw new Error('음성 데이터 디코딩 실패 (Base64 오류). 서버를 확인해 주세요.'); }
+    const binary = atob(data.b64);
     const bytes  = new Uint8Array(binary.length);
     for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
     rawBlob   = new Blob([bytes], { type: mime });
     audioMime = mime;
-    console.log('[loadAudio] blob ready', mime, (rawBlob.size/1024).toFixed(0)+'KB');
 
     // 기존 ObjectURL 해제 후 새로 세팅
     if (player.src && player.src.startsWith('blob:')) {
@@ -582,12 +595,8 @@ async function loadAudio() {
     player.src = URL.createObjectURL(rawBlob);
     player.load();
 
-    // canplay가 20초 내에 오지 않으면 에러 표시
-    _startCanplayTimer();
-
   } catch(err) {
     console.error('[loadAudio]', err);
-    _clearCanplayTimer();
     ovLoading.style.display = 'none';
     const isTimeout = err.name === 'AbortError';
     ovSchool.textContent  = isTimeout ? '연결 시간 초과' : '불러오기 실패';
@@ -599,7 +608,6 @@ async function loadAudio() {
 }
 
 function retryLoad() {
-  _clearCanplayTimer();
   document.getElementById('ovRetry').style.display = 'none';
   ovLoading.innerHTML     = '<span class="ov-spin"></span>불러오는 중…';
   ovLoading.style.display = 'flex';
@@ -617,7 +625,6 @@ function retryLoad() {
 player.addEventListener('canplay', () => {
   if (audioReady) return; // 중복 호출 방지 (재시도 시에도 안전)
   console.log('[canplay] audio ready');
-  _clearCanplayTimer(); // 타임아웃 가드 해제
   audioReady             = true;
   seekWrap.style.display = 'block';
   playBtn.disabled       = false;
@@ -630,16 +637,11 @@ player.addEventListener('canplay', () => {
 /* ── audio error: 로딩 실패 시 에러 표시 ── */
 player.addEventListener('error', (e) => {
   console.error('[player error]', player.error);
-  _clearCanplayTimer();
   if (!audioReady) {
     ovLoading.style.display = 'none';
     ovSchool.textContent    = '재생 준비 실패';
     ovStudent.textContent   = '새로고침 후 다시 시도해 주세요';
     document.getElementById('ovRetry').style.display = 'block';
-  } else {
-    statusMsg.className='status err';
-    statusMsg.textContent='음성 재생 중 오류가 발생했습니다.';
-    playBtn.disabled=true;
   }
 });
 
@@ -721,6 +723,9 @@ seekBar.addEventListener('change', () => { player.currentTime=(seekBar.value/100
 
 player.addEventListener('play',  () => { wave.className='waveform playing'; playBtn.textContent='■'; statusMsg.textContent='재생 중…'; BGM.resume(); });
 player.addEventListener('pause', () => { wave.className='waveform'; playBtn.textContent='▶'; statusMsg.textContent=''; BGM.pause(); });
+player.addEventListener('error', () => {
+  if (audioReady) { statusMsg.className='status err'; statusMsg.textContent='음성 재생 중 오류가 발생했습니다.'; playBtn.disabled=true; }
+});
 
 /* ── 재생 종료 → 완료 화면 ── */
 player.addEventListener('ended', () => {
