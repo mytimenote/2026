@@ -65,7 +65,7 @@ select{cursor:pointer;appearance:none;-webkit-appearance:none}
 .pw-row{background:var(--bg);border-radius:12px;padding:.875rem 1rem;border:1px solid var(--border)}
 .pw-row-top{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:.625rem}
 .pw-school{flex:1;font-size:14px;font-weight:700;color:var(--text);min-width:80px}
-.pw-value{font-size:12.5px;color:var(--muted);font-family:monospace;letter-spacing:1px;background:var(--card);border-radius:6px;padding:3px 8px}
+.pw-value{font-size:13px;color:var(--text);font-family:monospace;font-weight:600;letter-spacing:.5px;background:#FFF7ED;border:1px solid #F8DBBE;border-radius:6px;padding:3px 9px}
 .pw-dates{font-size:11.5px;color:var(--muted);margin-bottom:.5rem;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
 .pd-badge{display:inline-flex;align-items:center;padding:2px 9px;border-radius:99px;font-size:10.5px;font-weight:600}
 .pd-badge.active  {background:var(--green-bg);color:var(--green);border:1px solid var(--green-bd)}
@@ -168,9 +168,19 @@ footer{margin-top:3rem;text-align:center;font-size:12px;color:var(--faint);lette
   <div style="width:100%;max-width:340px;padding:32px 24px;background:#fff;border-radius:16px;box-shadow:0 8px 32px rgba(0,0,0,.12);text-align:center;">
     <div style="font-size:20px;font-weight:700;margin-bottom:6px;">관리자 로그인</div>
     <div style="font-size:13px;color:#888;margin-bottom:20px;">관리자 비밀번호를 입력하세요</div>
-    <input id="adminPw" type="password" placeholder="비밀번호" autocomplete="off"
-      onkeydown="if(event.key==='Enter')adminLogin()"
-      style="width:100%;padding:12px 14px;font-size:15px;border:1px solid #ddd;border-radius:10px;box-sizing:border-box;margin-bottom:12px;" />
+    <div style="position:relative;margin-bottom:12px;">
+      <input id="adminPw" type="password" placeholder="비밀번호" autocomplete="off"
+        onkeydown="if(event.key==='Enter')adminLogin()"
+        style="width:100%;padding:12px 44px 12px 14px;font-size:15px;border:1px solid #ddd;border-radius:10px;box-sizing:border-box;" />
+      <button type="button" id="adminPwToggleBtn" onclick="toggleAdminPwVisible()" aria-label="비밀번호 표시"
+        style="position:absolute;right:8px;top:50%;transform:translateY(-50%);width:32px;height:32px;display:inline-flex;align-items:center;justify-content:center;background:transparent;border:none;cursor:pointer;color:#8B95A1;padding:0;">
+        <svg id="adminEyeIcon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <ellipse cx="12" cy="12" rx="9" ry="5.5"/>
+          <circle cx="12" cy="12" r="2.5"/>
+          <line id="adminEyeSlash" x1="3" y1="3" x2="21" y2="21" style="display:none"/>
+        </svg>
+      </button>
+    </div>
     <button id="loginBtn" onclick="adminLogin()"
       style="width:100%;padding:12px;font-size:15px;font-weight:600;color:#fff;background:#111;border:none;border-radius:10px;cursor:pointer;">로그인</button>
     <div id="loginErr" style="color:#d33;font-size:13px;margin-top:12px;min-height:18px;white-space:pre-line;"></div>
@@ -378,6 +388,16 @@ footer{margin-top:3rem;text-align:center;font-size:12px;color:var(--faint);lette
     loadSchools();
     loadPasswords();
   }
+  /* ── 로그인 비번 표시 토글 ── */
+  function toggleAdminPwVisible(){
+    const inp   = document.getElementById('adminPw');
+    const slash = document.getElementById('adminEyeSlash');
+    if (!inp) return;
+    const showing = inp.type === 'text';
+    inp.type = showing ? 'password' : 'text';
+    if (slash) slash.style.display = showing ? 'none' : 'inline';
+  }
+
   async function adminLogin(){
     const pw = (document.getElementById('adminPw').value || '').trim();
     const errEl = document.getElementById('loginErr');
@@ -542,6 +562,15 @@ footer{margin-top:3rem;text-align:center;font-size:12px;color:var(--faint);lette
       const data = await apiGet({ action:'schoolList' });
       if (data.error === 'AUTH_REQUIRED'){ logout(); return; }
       allPasswords = data.schools || [];
+      // 학교별 평문 비번 병렬 fetch (화면 표시 + 카톡 복사용)
+      await Promise.all(allPasswords.map(async p => {
+        if (p.hasPassword) {
+          try {
+            const r = await apiPost({ action:'getSchoolPassword', school: p.school });
+            if (r.success && r.password) p.plainPassword = r.password;
+          } catch { /* 개별 실패는 무시 */ }
+        }
+      }));
       const q = document.getElementById('pwSearchInput')?.value || '';
       renderPasswords(q);
       renderBulkList();
@@ -599,7 +628,11 @@ footer{margin-top:3rem;text-align:center;font-size:12px;color:var(--faint);lette
       <div class="pw-row" id="pwrow-${encSc}">
         <div class="pw-row-top">
           <span class="pw-school">🏫 ${schoolDisp}</span>
-          <span class="pw-value" id="pwval-${encSc}">${p.hasPassword?'🔒 설정됨':'⚠ 미설정'}</span>
+          <span class="pw-value" id="pwval-${encSc}">${
+            p.hasPassword
+              ? (p.plainPassword ? '🔑 ' + esc(p.plainPassword) : '🔒 설정됨')
+              : '⚠ 미설정'
+          }</span>
         </div>
         <div class="pw-dates" id="pddates-${encSc}">${dateStr}</div>
         <div class="pw-actions">
@@ -740,7 +773,10 @@ footer{margin-top:3rem;text-align:center;font-size:12px;color:var(--faint);lette
     const recordUrl = getPagesUrl() + '/record.html?school=' + encodeURIComponent(school);
     let msg = `🎓 ${school} 졸업 음성 메시지 녹음 안내\n\n`;
     msg += `📎 녹음 링크\n${recordUrl}\n`;
-    if (p.hasPassword) msg += `\n🔒 비밀번호: (학교에 별도 전달한 비밀번호)`;
+    if (p.hasPassword) {
+      if (p.plainPassword) msg += `\n🔒 비밀번호: ${p.plainPassword}`;
+      else                 msg += `\n🔒 비밀번호: (학교에 별도 전달한 비밀번호)`;
+    }
     if (p.startDate || p.endDate) msg += `\n\n📅 녹음 기간\n${p.startDate||'?'} ~ ${p.endDate||'?'}`;
     return msg;
   }
@@ -877,11 +913,11 @@ footer{margin-top:3rem;text-align:center;font-size:12px;color:var(--faint);lette
       const data = await apiPost({ action:'registerSchool', school, password:newPw, startDate:start, endDate:end });
       if (data.error === 'AUTH_REQUIRED'){ logout(); return; }
       if (data.success) {
-        // 비번은 화면에 표시하지 않음 (평문 노출 차단)
+        // 비번 변경 후 화면에 평문 즉시 반영
         const valEl = document.getElementById('pwval-' + encSc);
-        if (valEl) valEl.textContent = '🔒 설정됨';
+        if (valEl) valEl.textContent = '🔑 ' + newPw;
         const cached = allPasswords.find(p => p.school === school);
-        if (cached) cached.hasPassword = true;
+        if (cached) { cached.hasPassword = true; cached.plainPassword = newPw; }
         document.getElementById('pwch-' + encSc)?.classList.remove('open');
         showMsg('pwDelOk', '✓ ' + school + ' 비밀번호가 변경됐습니다.');
       } else {
