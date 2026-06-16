@@ -86,8 +86,8 @@ input::placeholder{color:var(--faint)}
 .mini-play:hover{background:#D8EAFD;transform:scale(1.05)}
 .mini-play:active{transform:scale(.93)}
 .mini-play:disabled{opacity:.3;cursor:not-allowed;transform:none}
-.mini-seek{flex:1;-webkit-appearance:none;appearance:none;height:3px;border-radius:99px;outline:none;cursor:pointer;background:var(--border-l);margin:0;padding:0}
-.mini-seek::-webkit-slider-thumb{-webkit-appearance:none;width:10px;height:10px;border-radius:50%;background:var(--primary);border:none;box-shadow:none;cursor:pointer;margin-top:-3.5px}
+.mini-seek{flex:1;-webkit-appearance:none;appearance:none;height:10px;border-radius:99px;outline:none;cursor:pointer;background-color:transparent;background-image:linear-gradient(to right,var(--border-l),var(--border-l));background-size:100% 3px;background-position:center;background-repeat:no-repeat;margin:0;padding:0}
+.mini-seek::-webkit-slider-thumb{-webkit-appearance:none;width:10px;height:10px;border-radius:50%;background:var(--primary);border:none;box-shadow:none;cursor:pointer}
 .mini-seek::-moz-range-track{height:3px;border-radius:99px;background:var(--border-l)}
 .mini-seek::-moz-range-thumb{width:10px;height:10px;border-radius:50%;background:var(--primary);border:none;cursor:pointer}
 .mini-time{font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap;min-width:70px;text-align:right}
@@ -453,13 +453,14 @@ footer{margin-top:3rem;text-align:center;font-size:12px;color:var(--faint);lette
 
   /* ── 오디오 로드: action=audio b64 수신 → Blob URL 변환 ── */
   let currentRaf = null;
+  let seekDragging = false; // 드래그 중엔 RAF가 슬라이더 덮어쓰지 않도록
 
   function startRAF(fileId, audio) {
     stopRAF();
     const ms = $('ms-' + fileId);
     const mt = $('mt-' + fileId);
     function tick() {
-      if (audio.duration && isFinite(audio.duration)) {
+      if (!seekDragging && audio.duration && isFinite(audio.duration)) {
         const pct = (audio.currentTime / audio.duration) * 100;
         ms.value = pct;
         mt.textContent = fmtSec(audio.currentTime) + ' / ' + fmtSec(audio.duration);
@@ -524,12 +525,14 @@ footer{margin-top:3rem;text-align:center;font-size:12px;color:var(--faint);lette
     audio.addEventListener('ended', () => { mp.textContent='▶'; updateMiniSeek(ms,100); mt.textContent = fmtSec(audio.duration) + ' / ' + fmtSec(audio.duration); mst.textContent='재생 완료'; stopRAF(); });
     audio.addEventListener('error', () => { mst.textContent='재생 오류'; mp.disabled=true; });
 
-    ms.addEventListener('change', () => {
-      audio.currentTime = (ms.value / 100) * audio.duration;
-    });
     ms.addEventListener('input', () => {
+      seekDragging = true;
       updateMiniSeek(ms, parseFloat(ms.value));
       mt.textContent = fmtSec((parseFloat(ms.value)/100)*(audio.duration||0)) + ' / ' + fmtSec(audio.duration||0);
+    });
+    ms.addEventListener('change', () => {
+      audio.currentTime = (ms.value / 100) * audio.duration;
+      seekDragging = false;
     });
 
     audio.load();
@@ -564,15 +567,14 @@ footer{margin-top:3rem;text-align:center;font-size:12px;color:var(--faint);lette
   }
 
   function updateMiniSeek(el, pct) {
-    // thumb 10px 반지름(5px)만큼 보정 → 색상 경계가 thumb 중심에 정확히 맞음
+    // thumb 10px(반지름5px) 보정 → 색상 경계가 thumb 중심에 정확히 맞음
     var tw = el.offsetWidth;
+    var adj = pct;
     if (tw > 10) {
       var center = 5 + (pct / 100) * (tw - 10);
-      var adj = (center / tw) * 100;
-      el.style.background = 'linear-gradient(to right,var(--primary) ' + adj + '%,var(--border-l) ' + adj + '%)';
-    } else {
-      el.style.background = 'linear-gradient(to right,var(--primary) ' + pct + '%,var(--border-l) ' + pct + '%)';
+      adj = (center / tw) * 100;
     }
+    el.style.backgroundImage = 'linear-gradient(to right,var(--primary) ' + adj + '%,var(--border-l) ' + adj + '%)';
   }
 
   /* ── 반번호별 아바타 색상 팔레트 ── */
