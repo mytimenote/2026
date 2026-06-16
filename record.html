@@ -584,10 +584,16 @@ footer{margin-top:3rem;text-align:center;font-size:11px;color:var(--faint);lette
     if(!name)return showErr('이름을 입력해 주세요.');
     if(!className)return showErr(getPersonType()==='teacher'?'직책을 선택해 주세요.':'반과 번호를 선택해 주세요.');
     if(!blob)return showErr('먼저 녹음을 완료해 주세요.');
+    if(blob.size < 100)return showErr('녹음 데이터가 너무 작습니다. 다시 녹음해 주세요.');
     $('preview').pause();clearAlerts();$('alertLoad').style.display='block';
     $('listenBtn').disabled=true;$('saveBtn').disabled=true;$('retryBtn').disabled=true;
     try{
       const base64=await toBase64(blob);
+      if(!base64||base64.length<100){
+        $('alertLoad').style.display='none';
+        $('listenBtn').disabled=false;$('saveBtn').disabled=false;$('retryBtn').disabled=false;
+        return showErr('음성 데이터 변환에 실패했습니다. 다시 녹음해 주세요.');
+      }
       const data = await uploadWithRetry({action:'upload',token:SCHOOL_TOKEN,name,className,audioBase64:base64,mimeType});
       $('alertLoad').style.display='none';
       if(data.success){
