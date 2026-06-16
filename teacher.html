@@ -19,7 +19,6 @@ body{min-height:100vh;background:var(--bg);font-family:'Noto Sans KR',sans-serif
 @keyframes fadeIn{from{opacity:0}to{opacity:1}}
 @keyframes spin  {to{transform:rotate(360deg)}}
 @keyframes shake {0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-7px)}40%,80%{transform:translateX(7px)}}
-@keyframes wave  {0%,100%{height:3px;opacity:.25}50%{height:22px;opacity:.9}}
 
 .page{width:100%;max-width:500px}
 
@@ -82,17 +81,14 @@ input::placeholder{color:var(--faint)}
 /* 인라인 플레이어 */
 .s-player{display:none;margin-top:1rem;border-top:1px solid var(--border-l);padding-top:1rem}
 .s-row.expanded .s-player{display:block;animation:fadeIn .25s ease}
-.mini-wave{display:flex;align-items:center;justify-content:center;gap:3px;height:28px;margin-bottom:.875rem}
-.mini-bar{width:2.5px;border-radius:99px;background:var(--pri-lt);height:3px;opacity:.25}
-.mini-wave.playing .mini-bar{animation:wave 1.2s ease-in-out infinite}
 .mini-controls{display:flex;align-items:center;gap:8px}
 .mini-play{width:40px;height:40px;border-radius:50%;border:none;background:var(--pri-bg);color:var(--primary);font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:background .15s,transform .1s}
 .mini-play:hover{background:#D8EAFD;transform:scale(1.05)}
 .mini-play:active{transform:scale(.93)}
 .mini-play:disabled{opacity:.3;cursor:not-allowed;transform:none}
-.mini-seek{flex:1;-webkit-appearance:none;appearance:none;height:1px;border-radius:99px;outline:none;cursor:pointer;background:var(--border-l)}
-.mini-seek::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:transparent;border:none;box-shadow:none;cursor:pointer}
-.mini-seek::-moz-range-thumb{width:16px;height:16px;border-radius:50%;background:transparent;border:none;cursor:pointer}
+.mini-seek{flex:1;-webkit-appearance:none;appearance:none;height:4px;border-radius:99px;outline:none;cursor:pointer;background:var(--border-l)}
+.mini-seek::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:var(--primary);border:2px solid var(--card);box-shadow:0 1px 4px rgba(49,130,246,.4);cursor:pointer}
+.mini-seek::-moz-range-thumb{width:14px;height:14px;border-radius:50%;background:var(--primary);border:2px solid var(--card);cursor:pointer}
 .mini-time{font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap;min-width:70px;text-align:right}
 .mini-status{font-size:11.5px;color:var(--muted);text-align:center;margin-top:.5rem;min-height:16px}
 .mini-loading{display:none;text-align:center;padding:.5rem 0}
@@ -374,17 +370,6 @@ footer{margin-top:3rem;text-align:center;font-size:12px;color:var(--faint);lette
             <span class="mini-spinner"></span>
           </div>
           <div id="pc-${s.fileId}" style="display:none">
-            <div class="mini-wave" id="mw-${s.fileId}">
-              <div class="mini-bar" style="animation-delay:.00s"></div>
-              <div class="mini-bar" style="animation-delay:.08s"></div>
-              <div class="mini-bar" style="animation-delay:.16s"></div>
-              <div class="mini-bar" style="animation-delay:.24s"></div>
-              <div class="mini-bar" style="animation-delay:.32s"></div>
-              <div class="mini-bar" style="animation-delay:.24s"></div>
-              <div class="mini-bar" style="animation-delay:.16s"></div>
-              <div class="mini-bar" style="animation-delay:.08s"></div>
-              <div class="mini-bar" style="animation-delay:.00s"></div>
-            </div>
             <div class="mini-controls">
               <button class="mini-play" id="mp-${s.fileId}" onclick="playStudent('${s.fileId}')">▶</button>
               <input  class="mini-seek" id="ms-${s.fileId}" type="range" min="0" max="100" value="0" step="0.1">
@@ -408,7 +393,28 @@ footer{margin-top:3rem;text-align:center;font-size:12px;color:var(--faint);lette
   }
 
   /* ── 행 열기/닫기 ── */
-  const loadedAudios = {}; // fileId → { blob, audio }
+  const loadedAudios = {}; // fileId → { audio }
+
+  /* ── LRU 오디오 캐시 (최근 N명 유지 → 재확인 시 재다운로드 방지 + 메모리 누적 방지) ── */
+  const MAX_CACHED_AUDIOS = 5;
+  const cacheOrder = []; // 가장 최근이 앞
+
+  function _touchAudioCache(fileId) {
+    const i = cacheOrder.indexOf(fileId);
+    if (i !== -1) cacheOrder.splice(i, 1);
+    cacheOrder.unshift(fileId);
+    while (cacheOrder.length > MAX_CACHED_AUDIOS) {
+      _releaseAudio(cacheOrder.pop());
+    }
+  }
+
+  function _releaseAudio(fileId) {
+    const e = loadedAudios[fileId];
+    if (!e) return;
+    try { e.audio.pause(); } catch(_) {}
+    try { if (e.audio.src) URL.revokeObjectURL(e.audio.src); } catch(_) {}
+    delete loadedAudios[fileId];
+  }
 
   function toggleRow(fileId) {
     const safeId = 'row-' + encodeURIComponent(fileId);
@@ -431,6 +437,15 @@ footer{margin-top:3rem;text-align:center;font-size:12px;color:var(--faint);lette
         fetchAudio(fileId);
       } else {
         showAudioControls(fileId);
+        _touchAudioCache(fileId);
+        // 캐시된 오디오는 stopCurrentAudio에서 currentTime=0으로 리셋됨 → UI도 동기화
+        const entry = loadedAudios[fileId];
+        if (entry && entry.audio) {
+          const ms = $('ms-' + fileId);
+          const mt = $('mt-' + fileId);
+          if (ms) { ms.value = 0; updateMiniSeek(ms, 0); }
+          if (mt) mt.textContent = '0:00 / ' + fmtSec(entry.audio.duration || 0);
+        }
       }
     }
   }
@@ -477,6 +492,7 @@ footer{margin-top:3rem;text-align:center;font-size:12px;color:var(--faint);lette
       const audio = new Audio();
       audio.src   = URL.createObjectURL(blob);
       loadedAudios[fileId] = { audio };
+      _touchAudioCache(fileId);
       wireAudio(fileId, audio);
 
     } catch(err) {
@@ -487,7 +503,6 @@ footer{margin-top:3rem;text-align:center;font-size:12px;color:var(--faint);lette
   }
 
   function wireAudio(fileId, audio) {
-    const mw  = $('mw-' + fileId);
     const mp  = $('mp-' + fileId);
     const ms  = $('ms-' + fileId);
     const mt  = $('mt-' + fileId);
@@ -503,9 +518,9 @@ footer{margin-top:3rem;text-align:center;font-size:12px;color:var(--faint);lette
       mt.textContent   = '0:00 / ' + fmtSec(audio.duration);
     }, { once: true });
 
-    audio.addEventListener('play',  () => { mw.className='mini-wave playing'; mp.textContent='■'; mst.textContent='재생 중'; startRAF(fileId, audio); });
-    audio.addEventListener('pause', () => { mw.className='mini-wave'; mp.textContent='▶'; mst.textContent=''; stopRAF(); });
-    audio.addEventListener('ended', () => { mw.className='mini-wave'; mp.textContent='▶'; updateMiniSeek(ms,100); mt.textContent = fmtSec(audio.duration) + ' / ' + fmtSec(audio.duration); mst.textContent='재생 완료'; stopRAF(); });
+    audio.addEventListener('play',  () => { mp.textContent='■'; mst.textContent='재생 중'; startRAF(fileId, audio); });
+    audio.addEventListener('pause', () => { mp.textContent='▶'; mst.textContent=''; stopRAF(); });
+    audio.addEventListener('ended', () => { mp.textContent='▶'; updateMiniSeek(ms,100); mt.textContent = fmtSec(audio.duration) + ' / ' + fmtSec(audio.duration); mst.textContent='재생 완료'; stopRAF(); });
     audio.addEventListener('error', () => { mst.textContent='재생 오류'; mp.disabled=true; });
 
     ms.addEventListener('change', () => {
