@@ -9,7 +9,7 @@
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
   --bg:#F7F8FA; --card:#FFFFFF; --primary:#3182F6; --pri-lt:#5B9DF8; --pri-bg:#EBF3FE;
-  --border:#E5E8EB; --text:#191919; --sub:#4E4E4E; --muted:#8B95A1; --faint:#C6CAD0;
+  --border:#E5E8EB; --border-l:#EEF0F3; --text:#191919; --sub:#4E4E4E; --muted:#8B95A1; --faint:#C6CAD0;
   --input-bg:#F2F4F6; --red:#F04452; --red-bg:#FFF2F3; --red-bd:#FDDDDD;
   --green:#2BA25B; --green-bg:#F0FAF4; --green-bd:#B5DFC4;
   --shadow:0 1px 3px rgba(0,0,0,.06),0 4px 16px rgba(0,0,0,.05);
@@ -90,10 +90,10 @@ input::placeholder{color:var(--faint)}
 .mini-play:hover{background:#D8EAFD;transform:scale(1.05)}
 .mini-play:active{transform:scale(.93)}
 .mini-play:disabled{opacity:.3;cursor:not-allowed;transform:none}
-.mini-seek{flex:1;-webkit-appearance:none;appearance:none;height:3px;border-radius:99px;outline:none;cursor:pointer}
+.mini-seek{flex:1;-webkit-appearance:none;appearance:none;height:6px;border-radius:99px;outline:none;cursor:pointer;background:var(--border-l)}
 .mini-seek::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:var(--primary);border:2px solid var(--card);box-shadow:0 1px 4px rgba(49,130,246,.4);cursor:pointer}
 .mini-seek::-moz-range-thumb{width:14px;height:14px;border-radius:50%;background:var(--primary);border:2px solid var(--card);cursor:pointer}
-.mini-time{font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap;min-width:35px}
+.mini-time{font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap;min-width:70px;text-align:right}
 .mini-status{font-size:11.5px;color:var(--muted);text-align:center;margin-top:.5rem;min-height:16px}
 .mini-loading{display:none;text-align:center;padding:.5rem 0}
 .mini-spinner{display:inline-block;width:16px;height:16px;border:2px solid var(--faint);border-top-color:var(--primary);border-radius:50%;animation:spin .7s linear infinite}
@@ -388,7 +388,7 @@ footer{margin-top:3rem;text-align:center;font-size:12px;color:var(--faint);lette
             <div class="mini-controls">
               <button class="mini-play" id="mp-${s.fileId}" onclick="playStudent('${s.fileId}')">▶</button>
               <input  class="mini-seek" id="ms-${s.fileId}" type="range" min="0" max="100" value="0" step="0.1">
-              <span   class="mini-time" id="mt-${s.fileId}">0:00</span>
+              <span   class="mini-time" id="mt-${s.fileId}">0:00 / 0:00</span>
             </div>
             <div class="mini-status" id="mst-${s.fileId}"></div>
           </div>
@@ -446,7 +446,7 @@ footer{margin-top:3rem;text-align:center;font-size:12px;color:var(--faint);lette
       if (audio.duration && isFinite(audio.duration)) {
         const pct = (audio.currentTime / audio.duration) * 100;
         ms.value = pct;
-        mt.textContent = fmtSec(audio.currentTime);
+        mt.textContent = fmtSec(audio.currentTime) + ' / ' + fmtSec(audio.duration);
         updateMiniSeek(ms, pct);
       }
       if (!audio.paused && !audio.ended) currentRaf = requestAnimationFrame(tick);
@@ -500,11 +500,12 @@ footer{margin-top:3rem;text-align:center;font-size:12px;color:var(--faint);lette
       pc.style.display = 'block';
       mp.disabled      = false;
       updateMiniSeek(ms, 0);
+      mt.textContent   = '0:00 / ' + fmtSec(audio.duration);
     }, { once: true });
 
     audio.addEventListener('play',  () => { mw.className='mini-wave playing'; mp.textContent='■'; mst.textContent='재생 중'; startRAF(fileId, audio); });
     audio.addEventListener('pause', () => { mw.className='mini-wave'; mp.textContent='▶'; mst.textContent=''; stopRAF(); });
-    audio.addEventListener('ended', () => { mw.className='mini-wave'; mp.textContent='▶'; updateMiniSeek(ms,100); mst.textContent='재생 완료'; stopRAF(); });
+    audio.addEventListener('ended', () => { mw.className='mini-wave'; mp.textContent='▶'; updateMiniSeek(ms,100); mt.textContent = fmtSec(audio.duration) + ' / ' + fmtSec(audio.duration); mst.textContent='재생 완료'; stopRAF(); });
     audio.addEventListener('error', () => { mst.textContent='재생 오류'; mp.disabled=true; });
 
     ms.addEventListener('change', () => {
@@ -512,7 +513,7 @@ footer{margin-top:3rem;text-align:center;font-size:12px;color:var(--faint);lette
     });
     ms.addEventListener('input', () => {
       updateMiniSeek(ms, parseFloat(ms.value));
-      mt.textContent = fmtSec((parseFloat(ms.value)/100)*(audio.duration||0));
+      mt.textContent = fmtSec((parseFloat(ms.value)/100)*(audio.duration||0)) + ' / ' + fmtSec(audio.duration||0);
     });
 
     audio.load();
