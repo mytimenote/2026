@@ -538,7 +538,8 @@ footer{margin-top:3rem;text-align:center;font-size:12px;color:var(--faint);lette
 
       // ★ playToken이 없는 학생은 issuePlayToken API로 개별 발급
       //   (Code.gs 구버전 호환 — listRecordings에 playToken 미포함 시 보충)
-      const needToken = students.filter(s => s.fileId && !s.playToken);
+      // studentCode가 있으면 playToken 불필요 (makePlayUrl이 c= 분기로 처리됨)
+      const needToken = students.filter(s => s.fileId && !s.studentCode && !s.playToken);
       if (needToken.length) {
         await Promise.all(needToken.map(async s => {
           try {
