@@ -350,6 +350,7 @@ footer{margin-top:3rem;text-align:center;font-size:12px;color:var(--faint);lette
 
   /* ── 관리자 토큰 (메모리에만 보관; localStorage 저장 금지) ── */
   let ADMIN_TOKEN = '';
+  let WARM_TIMER  = null;  // GAS keep-warm 인터벌 핸들
 
   /* ── XSS 이스케이프 헬퍼 (9번) ── */
   function esc(s){
@@ -409,6 +410,15 @@ footer{margin-top:3rem;text-align:center;font-size:12px;color:var(--faint);lette
     loadSchools();
     loadPasswords();
     loadStorageConfig();
+    prewarmGas();                                          // 즉시 워밍 (SpreadsheetApp 콜드 스타트 회피)
+    if (WARM_TIMER) clearInterval(WARM_TIMER);
+    WARM_TIMER = setInterval(prewarmGas, 5 * 60 * 1000);   // 5분마다 keep-warm
+  }
+
+  // GAS 워밍 ping — registry/codes 시트를 한 번 터치해 컨테이너를 깨워둠
+  async function prewarmGas(){
+    if (!ADMIN_TOKEN) return;
+    try { await apiGet({ action: 'prewarm' }); } catch(e) {}
   }
   /* ── 로그인 비번 표시 토글 ── */
   function toggleAdminPwVisible(){
@@ -448,7 +458,11 @@ footer{margin-top:3rem;text-align:center;font-size:12px;color:var(--faint);lette
       errEl.textContent = '로그인 중 오류가 발생했습니다. GAS URL을 확인하세요.';
     } finally { btn.disabled = false; }
   }
-  function logout(){ ADMIN_TOKEN=''; showLoginGate(); }
+  function logout(){
+    ADMIN_TOKEN='';
+    if (WARM_TIMER) { clearInterval(WARM_TIMER); WARM_TIMER = null; }
+    showLoginGate();
+  }
 
   function switchTab(name) {
     ['qr','pw','settings'].forEach((n,i) => {
@@ -548,6 +562,12 @@ footer{margin-top:3rem;text-align:center;font-size:12px;color:var(--faint);lette
           } catch {}
         }));
       }
+
+      // 반-번호 자연 정렬 (className → name, 한국어 + 숫자 정렬)
+      students.sort(function(a, b){
+        var c = (a.className||'').localeCompare(b.className||'', 'ko', { numeric: true });
+        return c !== 0 ? c : (a.name||'').localeCompare(b.name||'', 'ko', { numeric: true });
+      });
 
       document.getElementById('loadingRow').style.display    = 'none';
       document.getElementById('resultSection').style.display = 'block';
