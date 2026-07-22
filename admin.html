@@ -378,10 +378,10 @@ footer{margin-top:3rem;text-align:center;font-size:12px;color:var(--faint);lette
 
   /* ── 공통 API 래퍼: 모든 관리자 요청에 토큰 자동 첨부 ── */
   async function apiGet(params){
-    const url = getGasUrl() + '?' + new URLSearchParams(
-      Object.assign({ token: ADMIN_TOKEN }, params)).toString();
-    const res = await fetch(url);
-    return res.json();
+    // 참고: 원래는 GET(쿼리스트링) 방식이었으나, 일부 네트워크/보안 프로그램이
+    // "?token=...&action=..." 형태의 GET 요청만 선별적으로 차단하는 사례가 있어
+    // 이미 정상 동작이 확인된 POST 방식(apiPost)으로 통일합니다.
+    return apiPost(params);
   }
   async function apiPost(payload){
     const res = await fetch(getGasUrl(), {

@@ -28,6 +28,7 @@ var PROP_HMAC_KEY    = 'HMAC_SECRET';   // 토큰 서명용 비밀키
 var PROP_ADMIN_HASH  = 'ADMIN_PW_HASH'; // 관리자 비번 해시
 var PROP_ADMIN_SALT  = 'ADMIN_PW_SALT'; // 관리자 비번 salt
 var PROP_REGISTRY_ID = 'REGISTRY_SS_ID';// registry 스프레드시트 ID
+var PROP_ROOT_FOLDER_ID = 'ROOT_FOLDER_ID'; // 신규 학교 저장 루트 폴더 ID (관리자 설정 탭)
 
 // 토큰 유효시간 (분)
 var TOKEN_TTL_ADMIN  = 120;  // 관리자 2시간
@@ -580,7 +581,7 @@ function doPost(e) {
     // ── 관리자 전용 액션 (토큰 필수) ──
     var adminActions = {
       registerSchool: 1, deleteSchool: 1, setDownloadEnabled: 1,
-      deleteRecording: 1, purgeExpired: 1
+      deleteRecording: 1, purgeExpired: 1, setStorageConfig: 1
     };
     if (adminActions[action]) {
       var ap = _verifyToken(data.token, 'admin');
@@ -590,10 +591,24 @@ function doPost(e) {
       if (action === 'setDownloadEnabled')  return setDownloadEnabled(data.school, data.enabled);
       if (action === 'deleteRecording')     return deleteRecording(data.school, data.fileId);
       if (action === 'purgeExpired')        return purgeExpired();
+      if (action === 'setStorageConfig')    return setStorageConfig(data);
     }
 
     // ── 학교 로그인 (교사용 토큰 발급) — 2번 ──
     if (action === 'schoolLogin') return schoolLogin(data);
+
+    // ── 관리자 조회성 액션 (원래 GET 전용이었으나, 일부 네트워크/보안 프로그램이
+    //     쿼리스트링 GET 요청을 차단하는 경우가 있어 POST로도 동일하게 지원 ──
+    var adminReadActions = { schoolList: 1, storageConfig: 1, prewarm: 1, list: 1, playToken: 1 };
+    if (adminReadActions[action]) {
+      var rp = _verifyToken(data.token, 'admin');
+      if (!rp) return makeJson({ ok: false, error: 'AUTH_REQUIRED' });
+      if (action === 'schoolList')    return getSchoolList();
+      if (action === 'storageConfig') return storageConfig();
+      if (action === 'prewarm')       return prewarm();
+      if (action === 'list')          return listRecordings(String(data.school || '').trim());
+      if (action === 'playToken')     return issuePlayToken(data.school || '', data.f || '');
+    }
 
     // ── 음성 업로드 (학생용; 학교 토큰 필요) — 6번 Lock ──
     if (action === 'upload') return uploadRecording(data);
@@ -641,6 +656,20 @@ function doGet(e) {
     var gp = _verifyToken(e.parameter.token, 'admin');
     if (!gp) return makeJson({ ok: false, error: 'AUTH_REQUIRED' });
     return getSchoolList();
+  }
+
+  // 관리자 토큰 필요: 저장 루트 폴더 설정 조회
+  if (action === 'storageConfig') {
+    var scp = _verifyToken(e.parameter.token, 'admin');
+    if (!scp) return makeJson({ ok: false, error: 'AUTH_REQUIRED' });
+    return storageConfig();
+  }
+
+  // 관리자 토큰 필요: 컨테이너 워밍(콜드 스타트 방지용 ping)
+  if (action === 'prewarm') {
+    var wp = _verifyToken(e.parameter.token, 'admin');
+    if (!wp) return makeJson({ ok: false, error: 'AUTH_REQUIRED' });
+    return prewarm();
   }
 
   // 관리자 토큰 필요: QR용 play 토큰 발급 (fileId+school에 서명)
@@ -1035,6 +1064,55 @@ function resetAllData() {
   Logger.log('registry / codes 시트를 헤더만 남기고 비웠습니다.');
   Logger.log('※ Drive 휴지통은 30일 후 자동 삭제되며, 수동으로 영구삭제 가능합니다.');
   Logger.log('─────────────────────────');
+}
+
+// ============================================================
+//  [L] 저장소(루트 폴더) 설정 — 관리자 설정 탭
+// ============================================================
+//  URL 통째로 붙여넣어도, ID만 넣어도 동작하도록 추출
+function _extractFolderId(input) {
+  var s = String(input || '').trim();
+  if (!s) return '';
+  var m = s.match(/\/folders\/([a-zA-Z0-9_-]+)/);
+  if (m) return m[1];
+  m = s.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+  if (m) return m[1];
+  return s; // 이미 ID만 입력한 경우
+}
+
+// 신규 학교 저장 루트 폴더 설정 저장 (빈 값이면 설정 해제)
+function setStorageConfig(data) {
+  var props = PropertiesService.getScriptProperties();
+  var id = _extractFolderId(data.rootFolderId);
+  if (!id) {
+    props.deleteProperty(PROP_ROOT_FOLDER_ID);
+    return makeJson({ ok: true, cleared: true });
+  }
+  try {
+    var folder = DriveApp.getFolderById(id); // 접근 가능한 폴더인지 검증
+    props.setProperty(PROP_ROOT_FOLDER_ID, id);
+    return makeJson({ ok: true, rootFolderId: id, rootFolderName: folder.getName() });
+  } catch (e) {
+    return makeJson({ ok: false, error: '폴더를 찾을 수 없습니다. ID나 URL을 다시 확인하세요.' });
+  }
+}
+
+// 현재 저장된 루트 폴더 설정 조회
+function storageConfig() {
+  var id = PropertiesService.getScriptProperties().getProperty(PROP_ROOT_FOLDER_ID);
+  if (!id) return makeJson({ ok: true });
+  try {
+    var folder = DriveApp.getFolderById(id);
+    return makeJson({ ok: true, rootFolderId: id, rootFolderName: folder.getName() });
+  } catch (e) {
+    return makeJson({ ok: true }); // 폴더가 삭제된 경우 등은 조용히 무시
+  }
+}
+
+// 컨테이너 워밍 — registry를 살짝 건드려 콜드 스타트 방지
+function prewarm() {
+  try { _getRegistrySheet(); } catch (e) {}
+  return makeJson({ ok: true });
 }
 
 // ============================================================
