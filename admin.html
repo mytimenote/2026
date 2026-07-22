@@ -136,12 +136,13 @@ select{cursor:pointer;appearance:none;-webkit-appearance:none}
 .stat-lbl{font-size:11px;color:var(--muted)}
 .action-bar{display:flex;gap:8px;margin-bottom:1.25rem;flex-wrap:wrap}
 .qr-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
-.qr-card{background:var(--card);border-radius:12px;padding:1rem .875rem;text-align:center;box-shadow:var(--shadow);transition:transform .15s,box-shadow .15s}
+.qr-card{background:var(--card);border-radius:12px;padding:1rem .875rem;text-align:center;box-shadow:var(--shadow);transition:transform .15s,box-shadow .15s;border-top:3px solid transparent}
 .qr-card:hover{transform:translateY(-2px);box-shadow:0 4px 20px rgba(0,0,0,.09)}
 .qr-box{background:#fff;border-radius:6px;padding:5px;display:inline-flex;align-items:center;justify-content:center;margin-bottom:.625rem;border:1px solid var(--border)}
 .qr-box img,.qr-box canvas{width:128px!important;height:128px!important;display:block}
+.qr-box-empty{width:128px;height:128px;background:var(--input-bg);border-radius:4px;display:flex;align-items:center;justify-content:center;color:var(--faint);font-size:11px}
 .qr-name{font-size:13px;font-weight:600;margin-bottom:2px}
-.qr-cls{font-size:11px;color:var(--muted);margin-bottom:.5rem}
+.qr-cls{font-size:11px;color:var(--muted);margin-bottom:.5rem;font-weight:500;display:inline-block;padding:2px 8px;border-radius:99px}
 .qr-del{width:100%;padding:7px 0;border-radius:8px;border:none;background:var(--red-bg);color:var(--red);font-size:11px;font-family:'Noto Sans KR',sans-serif;font-weight:500;cursor:pointer;transition:background .15s}
 .qr-del:hover{background:#FFE5E7}
 .qr-del:disabled{opacity:.4;cursor:not-allowed}
@@ -587,25 +588,71 @@ footer{margin-top:3rem;text-align:center;font-size:12px;color:var(--faint);lette
     }
   }
 
+  /* ── 반별 색상 팔레트 (teacher.html과 동일 규칙) ── */
+  const BAN_PALETTE = [
+    {bg:'#EBF3FE',fg:'#3182F6'}, // 1반 — 파랑
+    {bg:'#F0FAF4',fg:'#2BA25B'}, // 2반 — 초록
+    {bg:'#FFF7ED',fg:'#E07C2A'}, // 3반 — 주황
+    {bg:'#F5F0FF',fg:'#7C3AED'}, // 4반 — 보라
+    {bg:'#FFF2F3',fg:'#F04452'}, // 5반 — 빨강
+    {bg:'#E6FBF5',fg:'#0B9E77'}, // 6반 — 민트
+    {bg:'#FFF9E6',fg:'#D97706'}, // 7반 — 노랑
+    {bg:'#EDE9FE',fg:'#6D28D9'}, // 8반 — 남보라
+  ];
+  function getBanColor(className) {
+    const m = (className || '').match(/(\d+)반/);
+    if (!m) return { bg:'#F0FAF4', fg:'#2BA25B' }; // 교직원 — 초록
+    const n = parseInt(m[1]) - 1;
+    return BAN_PALETTE[n % BAN_PALETTE.length];
+  }
+
+  // 프로그레시브 QR 렌더링 진행 취소용 (다시 로드 시 이전 작업 중단)
+  let _qrRenderJob = 0;
+
   function renderGrid() {
     const grid = document.getElementById('qrGrid');
     if (!students.length) { grid.innerHTML = '<div class="empty">녹음된 학생이 없습니다</div>'; return; }
-    grid.innerHTML = students.map((s,i) => `
-      <div class="qr-card" id="qc-${i}">
-        <div class="qr-box" id="qr-box-${i}"></div>
+
+    // 1) 카드 마크업 즉시 삽입 (QR 자리는 빈 박스로 시작 → 화면 즉시 보임)
+    grid.innerHTML = students.map((s,i) => {
+      const bc = getBanColor(s.className);
+      return `
+      <div class="qr-card" id="qc-${i}" style="border-top-color:${bc.fg}">
+        <div class="qr-box" id="qr-box-${i}"><div class="qr-box-empty">불러오는 중…</div></div>
         <div class="qr-name">${esc(s.name)}</div>
-        <div class="qr-cls">${esc(s.className)}</div>
+        <div class="qr-cls" style="background:${bc.bg};color:${bc.fg}">${esc(s.className)}</div>
         <button class="qr-del" id="qdel-${i}"
           onclick="deleteRecording(${i},'${escJs(s.fileId)}','${escJs(s.name)}','${escJs(s.className)}')">
           🗑 삭제
         </button>
-      </div>`).join('');
-    students.forEach((s,i) => {
-      new QRCode(document.getElementById('qr-box-'+i), {
-        text: makePlayUrl(s), width:128, height:128,
-        colorDark:'#191919', colorLight:'#ffffff', correctLevel: QRCode.CorrectLevel.L
-      });
-    });
+      </div>`;
+    }).join('');
+
+    // 2) QR 코드를 배치로 생성 — 한 프레임에 CHUNK개씩 (메인 스레드 블록 방지)
+    const myJob = ++_qrRenderJob;
+    const CHUNK = 8;   // 한 프레임당 생성 개수 (모바일 저사양 대비 보수적)
+    let idx = 0;
+
+    function renderChunk() {
+      if (myJob !== _qrRenderJob) return; // 새 renderGrid가 시작되면 중단
+      const end = Math.min(idx + CHUNK, students.length);
+      for (let i = idx; i < end; i++) {
+        const s = students[i];
+        const box = document.getElementById('qr-box-' + i);
+        if (!box) continue;
+        box.innerHTML = ''; // 로딩 자리 제거
+        new QRCode(box, {
+          text: makePlayUrl(s), width:128, height:128,
+          colorDark:'#191919', colorLight:'#ffffff', correctLevel: QRCode.CorrectLevel.L
+        });
+      }
+      idx = end;
+      if (idx < students.length) {
+        // 다음 프레임에서 계속
+        (window.requestIdleCallback || window.requestAnimationFrame)(renderChunk);
+      }
+    }
+    (window.requestIdleCallback || window.requestAnimationFrame)(renderChunk);
   }
 
   async function deleteRecording(idx, fileId, name, cls) {
@@ -631,11 +678,28 @@ footer{margin-top:3rem;text-align:center;font-size:12px;color:var(--faint);lette
     }
   }
 
+  // 아직 생성되지 않은 QR을 즉시 강제 생성 (ZIP 다운로드 전 사용)
+  function _ensureAllQrsRendered() {
+    for (let i = 0; i < students.length; i++) {
+      const box = document.getElementById('qr-box-' + i);
+      if (!box) continue;
+      if (!box.querySelector('canvas')) {
+        box.innerHTML = '';
+        new QRCode(box, {
+          text: makePlayUrl(students[i]), width:128, height:128,
+          colorDark:'#191919', colorLight:'#ffffff', correctLevel: QRCode.CorrectLevel.L
+        });
+      }
+    }
+  }
+
   async function downloadZip() {
     if (!students.length) return alert('학생 데이터가 없습니다.');
     const school = document.getElementById('schoolSelect').value;
     const btn    = document.getElementById('dlBtn');
     btn.disabled = true; btn.textContent = '생성 중…';
+    // 프로그레시브 렌더링 중 다운로드를 눌러도 빠진 QR이 없도록 강제 완료
+    _ensureAllQrsRendered();
     const zip = new JSZip();
     await Promise.all(students.map((s,i) => new Promise(resolve => {
       const canvas = document.getElementById('qr-box-'+i)?.querySelector('canvas');
