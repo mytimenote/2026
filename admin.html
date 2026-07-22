@@ -232,8 +232,12 @@ footer{margin-top:3rem;text-align:center;font-size:12px;color:var(--faint);lette
         <input id="pwSchool" type="text" placeholder="예: ○○초등학교" />
       </div>
       <div class="field">
-        <label class="lbl">비밀번호</label>
+        <label class="lbl">학생용 비밀번호</label>
         <input id="pwValue" type="text" placeholder="예: 2026neul" />
+      </div>
+      <div class="field">
+        <label class="lbl">선생님용 비밀번호 <span style="color:var(--muted);font-weight:400">(선생님 확인 페이지 로그인용)</span></label>
+        <input id="pwTeacherValue" type="text" placeholder="예: teacher2026" />
       </div>
       <div class="field">
         <label class="lbl">녹음 시작일 (선택)</label>
@@ -660,10 +664,10 @@ footer{margin-top:3rem;text-align:center;font-size:12px;color:var(--faint);lette
       const data = await apiGet({ action:'schoolList' });
       if (data.error === 'AUTH_REQUIRED'){ logout(); return; }
       allPasswords = data.schools || [];
-      // schoolList 응답에 평문 비번(password)이 이미 포함됨 → 그대로 사용
-      // (화면 표시 + 카톡 복사용. 별도 API 호출 불필요)
+      // schoolList 응답에 평문 비번(password / teacherPassword)이 이미 포함됨 → 그대로 사용
       allPasswords.forEach(p => {
         if (p.hasPassword && p.password) p.plainPassword = p.password;
+        // teacherPassword는 그대로 유지 (renderPasswords에서 참조)
       });
       const q = document.getElementById('pwSearchInput')?.value || '';
       renderPasswords(q);
@@ -718,6 +722,10 @@ footer{margin-top:3rem;text-align:center;font-size:12px;color:var(--faint);lette
       const dateStr = (p.startDate || p.endDate)
         ? `<span>${fmtDate(p.startDate)}~${fmtDate(p.endDate)}</span> ${badge}`
         : '<span style="color:var(--faint)">기간 없음 (항상 허용)</span>';
+      // 선생님 비번 표시 (학생 비번과 나란히)
+      const teacherPwDisp = p.hasTeacherPassword
+        ? (p.teacherPassword ? '👩‍🏫 ' + esc(p.teacherPassword) : '👩‍🏫 설정됨')
+        : '👩‍🏫 미설정';
       return `
       <div class="pw-row" id="pwrow-${encSc}">
         <div class="pw-row-top">
@@ -728,6 +736,10 @@ footer{margin-top:3rem;text-align:center;font-size:12px;color:var(--faint);lette
               : '⚠ 미설정'
           }</span>
         </div>
+        <div class="pw-row-top" style="margin-top:.25rem">
+          <span class="pw-school" style="visibility:hidden">🏫</span>
+          <span class="pw-value" id="pwtval-${encSc}" style="color:${p.hasTeacherPassword ? 'var(--sub)' : 'var(--red)'}">${teacherPwDisp}</span>
+        </div>
         <div class="pw-dates" id="pddates-${encSc}">${dateStr}</div>
         <div class="pw-actions">
           <button class="dl-toggle ${dlOn?'on':'off'}" id="dltog-${encSc}"
@@ -737,8 +749,11 @@ footer{margin-top:3rem;text-align:center;font-size:12px;color:var(--faint);lette
           <button class="period-btn" onclick="togglePeriodPanel('${encSc}')">
             📅 기간 설정
           </button>
-          <button class="period-btn" style="background:#FFF7ED;color:#E07C2A;border:1px solid #F8DBBE" onclick="togglePwChangePanel('${encSc}')">
-            🔑 비밀번호 변경
+          <button class="period-btn" style="background:#FFF7ED;color:#E07C2A;border:1px solid #F8DBBE" onclick="togglePwChangePanel('${encSc}','student')">
+            🔑 학생 비번
+          </button>
+          <button class="period-btn" style="background:#EEF6FF;color:#2563EB;border:1px solid #C9DEF9" onclick="togglePwChangePanel('${encSc}','teacher')">
+            👩‍🏫 선생님 비번
           </button>
           <button class="copy-btn" id="copybtn-${encSc}"
             onclick="copyShareMsg('${safeSc}','${encSc}')">
@@ -761,7 +776,7 @@ footer{margin-top:3rem;text-align:center;font-size:12px;color:var(--faint);lette
           </div>
         </div>
         <div class="pwch-panel" id="pwch-${encSc}">
-          <div class="pwch-title">🔑 비밀번호 변경</div>
+          <div class="pwch-title" id="pwch-title-${encSc}">🔑 비밀번호 변경</div>
           <div class="pwch-row">
             <input type="text" id="pwchinput-${encSc}" placeholder="새 비밀번호 입력"
               autocomplete="off"
@@ -808,14 +823,19 @@ footer{margin-top:3rem;text-align:center;font-size:12px;color:var(--faint);lette
   }
 
   async function savePassword() {
-    const school = document.getElementById('pwSchool').value.trim();
-    const pw     = document.getElementById('pwValue').value.trim();
-    const start  = document.getElementById('pwStart').value;
-    const end    = document.getElementById('pwEnd').value;
-    if (!school || !pw) { showMsg('pwErr','학교명과 비밀번호를 입력하세요.'); return; }
+    const school     = document.getElementById('pwSchool').value.trim();
+    const pw         = document.getElementById('pwValue').value.trim();
+    const teacherPw  = document.getElementById('pwTeacherValue').value.trim();
+    const start      = document.getElementById('pwStart').value;
+    const end        = document.getElementById('pwEnd').value;
+    if (!school || !pw) { showMsg('pwErr','학교명과 학생용 비밀번호를 입력하세요.'); return; }
     if (start && end && start > end) { showMsg('pwErr','종료일이 시작일보다 빠릅니다.'); return; }
     try {
-      const data = await apiPost({ action:'registerSchool', school, password:pw, startDate:start, endDate:end });
+      const data = await apiPost({
+        action:'registerSchool',
+        school, password:pw, teacherPassword:teacherPw,
+        startDate:start, endDate:end
+      });
       if (data.error === 'AUTH_REQUIRED'){ logout(); return; }
       if (data.success) {
         showMsg('pwOk','✓ 저장됐습니다.');
@@ -827,7 +847,7 @@ footer{margin-top:3rem;text-align:center;font-size:12px;color:var(--faint);lette
   }
 
   function clearPwForm() {
-    ['pwSchool','pwValue'].forEach(id => document.getElementById(id).value = '');
+    ['pwSchool','pwValue','pwTeacherValue'].forEach(id => document.getElementById(id).value = '');
     ['pwStart','pwEnd'].forEach(id => document.getElementById(id).value = '');
   }
 
@@ -923,20 +943,38 @@ footer{margin-top:3rem;text-align:center;font-size:12px;color:var(--faint);lette
     if (e) e.value = '';
   }
 
-  /* ── 인라인 비밀번호 변경 ── */
-  function togglePwChangePanel(encSc) {
+  /* ── 인라인 비밀번호 변경 (학생용/선생님용 공용) ── */
+  //  kind: 'student' | 'teacher'
+  const _pwchKind = {}; // encSc → 'student'|'teacher'
+  function togglePwChangePanel(encSc, kind) {
     const panel = document.getElementById('pwch-' + encSc);
     if (!panel) return;
     const isOpen = panel.classList.contains('open');
+    const sameKind = _pwchKind[encSc] === kind;
     // 기간 패널과 동시에 열리지 않도록
     document.getElementById('pp-' + encSc)?.classList.remove('open');
-    panel.classList.toggle('open', !isOpen);
-    if (!isOpen) {
-      const input = document.getElementById('pwchinput-' + encSc);
-      if (input) { input.value = ''; input.focus(); }
-      const err = document.getElementById('pwcherr-' + encSc);
-      if (err) err.textContent = '';
+    // 같은 종류를 다시 눌렀으면 닫기, 다른 종류면 유지하며 종류만 전환
+    if (isOpen && sameKind) {
+      panel.classList.remove('open');
+      return;
     }
+    _pwchKind[encSc] = kind || 'student';
+    // 타이틀·placeholder 갱신
+    const title = document.getElementById('pwch-title-' + encSc);
+    if (title) {
+      title.textContent = (kind === 'teacher')
+        ? '👩‍🏫 선생님용 비밀번호 변경'
+        : '🔑 학생용 비밀번호 변경';
+    }
+    const input = document.getElementById('pwchinput-' + encSc);
+    if (input) {
+      input.placeholder = (kind === 'teacher') ? '새 선생님 비밀번호' : '새 학생 비밀번호';
+      input.value = '';
+    }
+    panel.classList.add('open');
+    if (input) input.focus();
+    const err = document.getElementById('pwcherr-' + encSc);
+    if (err) err.textContent = '';
   }
 
   async function savePwChange(school, encSc) {
@@ -944,6 +982,7 @@ footer{margin-top:3rem;text-align:center;font-size:12px;color:var(--faint);lette
     const newPw = (input?.value || '').trim();
     const errEl = document.getElementById('pwcherr-' + encSc);
     const btn   = document.getElementById('pwchsave-' + encSc);
+    const kind  = _pwchKind[encSc] || 'student';
     if (!newPw) { if (errEl) errEl.textContent = '새 비밀번호를 입력해 주세요.'; return; }
     if (btn) btn.disabled = true;
     if (errEl) errEl.textContent = '';
@@ -952,16 +991,28 @@ footer{margin-top:3rem;text-align:center;font-size:12px;color:var(--faint);lette
       const row   = document.getElementById('pwrow-' + encSc);
       const start = row?.querySelector('[id^="ppstart-"]')?.value || '';
       const end   = row?.querySelector('[id^="ppend-"]')?.value   || '';
-      const data = await apiPost({ action:'registerSchool', school, password:newPw, startDate:start, endDate:end });
+      // kind에 따라 password / teacherPassword만 보냄 (다른 쪽은 빈 값으로 → 백엔드가 유지)
+      const payload = { action:'registerSchool', school, password:'', teacherPassword:'', startDate:start, endDate:end };
+      if (kind === 'teacher') payload.teacherPassword = newPw;
+      else                     payload.password        = newPw;
+      const data = await apiPost(payload);
       if (data.error === 'AUTH_REQUIRED'){ logout(); return; }
       if (data.success) {
-        // 비번 변경 후 화면에 평문 즉시 반영
-        const valEl = document.getElementById('pwval-' + encSc);
-        if (valEl) valEl.textContent = '🔑 ' + newPw;
-        const cached = allPasswords.find(p => p.school === school);
-        if (cached) { cached.hasPassword = true; cached.plainPassword = newPw; }
+        // 변경된 값 화면 즉시 반영
+        if (kind === 'teacher') {
+          const tEl = document.getElementById('pwtval-' + encSc);
+          if (tEl) { tEl.textContent = '👩‍🏫 ' + newPw; tEl.style.color = 'var(--sub)'; }
+          const cached = allPasswords.find(p => p.school === school);
+          if (cached) { cached.hasTeacherPassword = true; cached.teacherPassword = newPw; }
+          showMsg('pwDelOk', '✓ ' + school + ' 선생님 비밀번호가 변경됐습니다.');
+        } else {
+          const valEl = document.getElementById('pwval-' + encSc);
+          if (valEl) valEl.textContent = '🔑 ' + newPw;
+          const cached = allPasswords.find(p => p.school === school);
+          if (cached) { cached.hasPassword = true; cached.plainPassword = newPw; }
+          showMsg('pwDelOk', '✓ ' + school + ' 학생 비밀번호가 변경됐습니다.');
+        }
         document.getElementById('pwch-' + encSc)?.classList.remove('open');
-        showMsg('pwDelOk', '✓ ' + school + ' 비밀번호가 변경됐습니다.');
       } else {
         if (errEl) errEl.textContent = '변경 실패: ' + (data.error || '');
         if (btn) btn.disabled = false;

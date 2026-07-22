@@ -102,6 +102,27 @@ input::placeholder{color:var(--faint)}
 .load-row{display:flex;align-items:center;justify-content:center;gap:8px;padding:2rem;color:var(--muted);font-size:13px}
 .load-spinner{display:inline-block;width:16px;height:16px;border:2px solid var(--faint);border-top-color:var(--primary);border-radius:50%;animation:spin .7s linear infinite}
 
+/* 삭제 버튼 (플레이어 하단) */
+.s-delete-row{display:flex;justify-content:flex-end;margin-top:.75rem;padding-top:.75rem;border-top:1px dashed var(--border-l)}
+.s-delete-btn{background:var(--red-bg);color:var(--red);border:1px solid var(--red-bd);padding:8px 14px;border-radius:8px;font-size:12.5px;font-weight:600;font-family:'Noto Sans KR',sans-serif;cursor:pointer;transition:background .15s,transform .1s}
+.s-delete-btn:hover{background:#FFE4E7}
+.s-delete-btn:active{transform:scale(.96)}
+.s-delete-btn:disabled{opacity:.5;cursor:not-allowed}
+
+/* 삭제 확인 모달 */
+.modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;z-index:1000;animation:fadeIn .18s ease}
+.modal-backdrop.open{display:flex}
+.modal-card{background:var(--card);border-radius:16px;padding:1.5rem;width:90%;max-width:360px;box-shadow:0 8px 32px rgba(0,0,0,.2);animation:up .25s cubic-bezier(.22,1,.36,1) both}
+.modal-title{font-size:16px;font-weight:700;color:var(--text);margin-bottom:.5rem}
+.modal-desc{font-size:13px;color:var(--sub);margin-bottom:1rem;line-height:1.6}
+.modal-desc strong{color:var(--red)}
+.modal-err{color:var(--red);font-size:12.5px;text-align:center;min-height:18px;margin-top:.5rem}
+.modal-btns{display:flex;gap:.5rem;margin-top:1rem}
+.modal-btns button{flex:1;padding:11px;border-radius:8px;font-size:13.5px;font-weight:600;font-family:'Noto Sans KR',sans-serif;cursor:pointer;border:none;transition:opacity .15s}
+.modal-cancel{background:var(--input-bg);color:var(--sub)}
+.modal-confirm{background:var(--red);color:#fff}
+.modal-confirm:disabled{opacity:.5;cursor:not-allowed}
+
 footer{margin-top:3rem;text-align:center;font-size:12px;color:var(--faint);letter-spacing:.3px;font-weight:300}
 </style>
 </head>
@@ -148,7 +169,7 @@ footer{margin-top:3rem;text-align:center;font-size:12px;color:var(--faint);lette
   <div id="dash" class="dash">
     <div class="dash-header">
       <div class="dash-school" id="dashSchool"></div>
-      <div class="dash-sub">녹음 현황 — 읽기 전용</div>
+      <div class="dash-sub">녹음 현황 — 열람 · 삭제 가능</div>
     </div>
 
     <!-- 통계 -->
@@ -188,12 +209,34 @@ footer{margin-top:3rem;text-align:center;font-size:12px;color:var(--faint);lette
     <div style="background:var(--pri-bg);border:1.5px solid rgba(49,130,246,.2);border-radius:16px;padding:1.25rem 1.5rem;margin-top:.75rem">
       <div style="font-size:13px;font-weight:600;color:var(--primary);margin-bottom:.625rem">📌 안내</div>
       <p style="font-size:13px;color:var(--sub);line-height:2">
-        이 페이지는 <strong>확인 전용</strong>입니다.<br>
-        녹음 삭제·수정은 스튜디오 관리자에게 문의해 주세요.
+        학생 이름을 눌러 음성을 확인하실 수 있습니다.<br>
+        재녹음이 필요한 학생은 <strong>🗑 삭제</strong> 버튼으로 지운 뒤,<br>
+        학생에게 다시 녹음하도록 안내해 주세요.
       </p>
     </div>
 
     <footer style="margin-top:2rem">졸업앨범 음성 메시지</footer>
+  </div>
+
+  <!-- ── 삭제 확인 모달 ── -->
+  <div class="modal-backdrop" id="delModal">
+    <div class="modal-card">
+      <div class="modal-title">녹음 삭제 확인</div>
+      <div class="modal-desc" id="delModalDesc"></div>
+      <div class="field">
+        <label class="lbl">선생님 비밀번호 재입력</label>
+        <div class="pw-wrap">
+          <input id="delModalPw" type="password" placeholder="비밀번호"
+            oninput="document.getElementById('delModalErr').textContent=''"
+            onkeydown="if(event.key==='Enter')confirmDelete()" />
+        </div>
+      </div>
+      <div class="modal-err" id="delModalErr"></div>
+      <div class="modal-btns">
+        <button class="modal-cancel" onclick="closeDelModal()">취소</button>
+        <button class="modal-confirm" id="delModalConfirm" onclick="confirmDelete()">삭제</button>
+      </div>
+    </div>
   </div>
 
 </div>
@@ -203,11 +246,13 @@ footer{margin-top:3rem;text-align:center;font-size:12px;color:var(--faint);lette
   const $ = id => document.getElementById(id);
 
   let currentSchool  = '';
-  let SCHOOL_TOKEN   = ''; // schoolLogin 성공 시 발급
+  let SCHOOL_TOKEN   = ''; // teacherLogin 성공 시 발급
+  let _teacherPw     = ''; // 삭제 시 재확인용 (모달에서 재입력한 값과 비교 대신 서버 재검증)
   let allStudents    = [];
   let activeFilter   = '전체';
   let currentAudio   = null; // 현재 재생 중인 <audio>
   let currentRow     = null; // 현재 열린 s-row
+  let _delTarget     = null; // 삭제 대상: { fileId, name, className }
 
   /* XSS 이스케이프 (9번) */
   function esc(s){
@@ -247,22 +292,23 @@ footer{margin-top:3rem;text-align:center;font-size:12px;color:var(--faint);lette
     try {
       const res  = await fetch(GAS_URL, {
         method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'},
-        body: JSON.stringify({ action:'schoolLogin', school, password:pw }), redirect:'follow'
+        body: JSON.stringify({ action:'teacherLogin', school, password:pw }), redirect:'follow'
       });
       const data = await res.json();
       if (data.success && data.token) {
         SCHOOL_TOKEN  = data.token;
         currentSchool = school;
+        _teacherPw    = pw;  // 삭제 시 재확인용 (메모리에만)
         $('loginWrap').style.display = 'none';
         $('dash').style.display = 'block';
         $('dashSchool').textContent = school;
         loadStudents();
       } else if (data.error === 'LOCKED') {
         showErr(data.message || '시도가 많아 잠시 잠겼습니다.');
-      } else if (data.error === 'PERIOD') {
-        showErr(data.message || '열람 기간이 아닙니다.');
       } else if (data.error === 'NO_SCHOOL') {
         showErr('등록되지 않은 학교입니다.');
+      } else if (data.error === 'NO_TEACHER_PW') {
+        showErr(data.message || '선생님용 비밀번호가 설정되지 않았습니다.\n관리자에게 문의해 주세요.');
       } else {
         showErr('비밀번호가 틀렸습니다.' + (data.remain!=null?` (남은 시도 ${data.remain}회)`:''));
       }
@@ -270,6 +316,72 @@ footer{margin-top:3rem;text-align:center;font-size:12px;color:var(--faint);lette
       showErr('확인 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.');
     } finally {
       btn.disabled = false; btn.classList.remove('loading');
+    }
+  }
+
+  /* ── 삭제 확인 모달 ── */
+  function openDelModal(fileId, name, className) {
+    _delTarget = { fileId, name, className };
+    $('delModalDesc').innerHTML =
+      '<strong>' + esc(name) + '</strong> (' + esc(className) + ')의 녹음을 삭제합니다.<br>' +
+      '삭제 후에는 <strong>복구할 수 없습니다.</strong>';
+    $('delModalPw').value = '';
+    $('delModalErr').textContent = '';
+    $('delModal').classList.add('open');
+    setTimeout(() => $('delModalPw').focus(), 100);
+  }
+
+  function closeDelModal() {
+    $('delModal').classList.remove('open');
+    _delTarget = null;
+  }
+
+  async function confirmDelete() {
+    if (!_delTarget) return;
+    const pw = $('delModalPw').value.trim();
+    if (!pw) { $('delModalErr').textContent = '비밀번호를 입력해 주세요.'; return; }
+    const btn = $('delModalConfirm');
+    btn.disabled = true; btn.textContent = '삭제 중…';
+    try {
+      const res = await fetch(GAS_URL, {
+        method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'},
+        body: JSON.stringify({
+          action: 'teacherDeleteRecording',
+          token: SCHOOL_TOKEN,
+          fileId: _delTarget.fileId,
+          password: pw
+        }),
+        redirect:'follow'
+      });
+      const data = await res.json();
+      if (data.success) {
+        // 캐시된 오디오 해제 + 목록에서 제거
+        _releaseAudio(_delTarget.fileId);
+        allStudents = allStudents.filter(s => s.fileId !== _delTarget.fileId);
+        $('statTotal').textContent = allStudents.length;
+        buildFilterChips();
+        renderStudents();
+        closeDelModal();
+      } else if (data.error === 'AUTH_REQUIRED') {
+        // 토큰 만료 → 로그인 화면으로
+        closeDelModal();
+        $('dash').style.display = 'none';
+        $('loginWrap').style.display = 'block';
+        showErr('인증이 만료됐습니다. 다시 로그인해 주세요.');
+      } else if (data.error === 'WRONG_PW') {
+        $('delModalErr').textContent = '비밀번호가 틀렸습니다.' +
+          (data.remain != null ? ` (남은 시도 ${data.remain}회)` : '');
+        $('delModalPw').value = '';
+        $('delModalPw').focus();
+      } else if (data.error === 'LOCKED') {
+        $('delModalErr').textContent = data.message || '시도가 많아 잠시 잠겼습니다.';
+      } else {
+        $('delModalErr').textContent = '삭제 실패: ' + (data.error || '알 수 없는 오류');
+      }
+    } catch (err) {
+      $('delModalErr').textContent = '오류: ' + err.message;
+    } finally {
+      btn.disabled = false; btn.textContent = '삭제';
     }
   }
 
@@ -355,6 +467,8 @@ footer{margin-top:3rem;text-align:center;font-size:12px;color:var(--faint);lette
       const dateStr  = esc(formatDate(s.timestamp));
       const safeId   = 'row-' + encodeURIComponent(s.fileId);
       const fidJs    = escJs(s.fileId);
+      const nameJs   = escJs(s.name);
+      const clsJs    = escJs(s.className);
       return `
       <div class="s-row" id="${safeId}">
         <div class="s-top" onclick="toggleRow('${fidJs}')">
@@ -377,6 +491,9 @@ footer{margin-top:3rem;text-align:center;font-size:12px;color:var(--faint);lette
               <span class="mini-time" id="mt-${s.fileId}">0:00 / 0:00</span>
             </div>
             <div class="mini-status" id="mst-${s.fileId}"></div>
+          </div>
+          <div class="s-delete-row">
+            <button class="s-delete-btn" onclick="openDelModal('${fidJs}','${nameJs}','${clsJs}')">🗑 삭제</button>
           </div>
         </div>
       </div>`;
