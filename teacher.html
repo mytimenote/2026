@@ -61,8 +61,10 @@ input::placeholder{color:var(--faint)}
 /* 필터 바 */
 .filter-bar{display:flex;gap:6px;margin-bottom:1rem;overflow-x:auto;padding-bottom:2px;-webkit-overflow-scrolling:touch}
 .filter-bar::-webkit-scrollbar{display:none}
-.filter-chip{flex-shrink:0;padding:7px 14px;border-radius:99px;border:1.5px solid var(--border);background:var(--card);color:var(--sub);font-size:12.5px;font-family:'Noto Sans KR',sans-serif;font-weight:500;cursor:pointer;transition:all .15s;white-space:nowrap}
+.filter-chip{flex-shrink:0;padding:7px 14px;border-radius:99px;border:1.5px solid var(--border);background:var(--card);color:var(--sub);font-size:12.5px;font-family:'Noto Sans KR',sans-serif;font-weight:500;cursor:pointer;transition:all .15s;white-space:nowrap;display:inline-flex;align-items:center;gap:5px}
+.filter-chip .fc-count{font-size:11px;font-weight:600;opacity:.75}
 .filter-chip.active{background:var(--primary);border-color:var(--primary);color:#fff}
+.filter-chip.active .fc-count{opacity:1}
 .filter-chip:hover:not(.active){background:var(--input-bg)}
 
 /* 학생 목록 */
@@ -427,16 +429,26 @@ footer{margin-top:3rem;text-align:center;font-size:12px;color:var(--faint);lette
 
   /* ── 반 필터 칩 생성 ── */
   function buildFilterChips() {
-    const bans = [...new Set(allStudents.map(s => {
+    // 반별 인원수 집계
+    const counts = {};
+    allStudents.forEach(s => {
       const m = (s.className || '').match(/(\d+)반/);
-      return m ? m[1] + '반' : '교직원';
-    }))].sort((a, b) => {
-      const na = parseInt(a), nb = parseInt(b);
-      return isNaN(na) || isNaN(nb) ? a.localeCompare(b) : na - nb;
+      const key = m ? (m[1] + '반') : '교직원';
+      counts[key] = (counts[key] || 0) + 1;
     });
+    // 반 정렬 (숫자 우선, 마지막에 교직원)
+    const bans = Object.keys(counts).sort((a, b) => {
+      const na = parseInt(a), nb = parseInt(b);
+      if (isNaN(na) && isNaN(nb)) return a.localeCompare(b);
+      if (isNaN(na)) return 1;
+      if (isNaN(nb)) return -1;
+      return na - nb;
+    });
+    // 전체 칩 먼저, 그 뒤 반별 칩
+    const chips = [{label:'전체', count: allStudents.length}, ...bans.map(b => ({label:b, count: counts[b]}))];
     const bar = $('filterBar');
-    bar.innerHTML = ['전체', ...bans].map(b =>
-      `<button class="filter-chip${b === activeFilter ? ' active' : ''}" onclick="setFilter('${b}')">${b}</button>`
+    bar.innerHTML = chips.map(c =>
+      `<button class="filter-chip${c.label === activeFilter ? ' active' : ''}" onclick="setFilter('${c.label}')">${c.label}<span class="fc-count">(${c.count}명)</span></button>`
     ).join('');
   }
 
