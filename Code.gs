@@ -28,7 +28,9 @@ var PROP_HMAC_KEY    = 'HMAC_SECRET';   // 토큰 서명용 비밀키
 var PROP_ADMIN_HASH  = 'ADMIN_PW_HASH'; // 관리자 비번 해시
 var PROP_ADMIN_SALT  = 'ADMIN_PW_SALT'; // 관리자 비번 salt
 var PROP_REGISTRY_ID = 'REGISTRY_SS_ID';// registry 스프레드시트 ID
-var PROP_ROOT_FOLDER_ID = 'ROOT_FOLDER_ID'; // 신규 학교 저장 루트 폴더 ID (관리자 설정 탭)
+var PROP_ACTIVE_KID  = 'HMAC_ACTIVE_KID';   // 현재 서명에 쓰는 키 버전 (기본 v1)
+var PROP_REVOKED_KIDS= 'HMAC_REVOKED_KIDS'; // 폐기된 키 버전 목록 (쉼표 구분)
+var PROP_ROOT_FOLDER_ID = 'ROOT_FOLDER_ID'; // 관리자 설정에서 지정하는 신규 학교 저장 폴더
 
 // 토큰 유효시간 (분)
 var TOKEN_TTL_ADMIN  = 120;  // 관리자 2시간
@@ -54,7 +56,8 @@ function initSetup() {
     sh.appendRow([
       'school','ssId','folderId','pwHash','pwSalt',
       'downloadEnabled','startDate','endDate',
-      'gradYear','retainUntil','createdAt','pwEnc'
+      'gradYear','retainUntil','createdAt','pwEnc',
+      'tPwHash','tPwSalt'
     ]);
     sh.setFrozenRows(1);
     regId = ss.getId();
@@ -81,6 +84,48 @@ function setAdminPassword(plainPw) {
   props.setProperty(PROP_ADMIN_SALT, salt);
   props.setProperty(PROP_ADMIN_HASH, hash);
   Logger.log('[관리자 비밀번호 설정 완료]');
+}
+// ============================================================
+//  [A-2] 서명 키 버전 관리 — 에디터에서 수동 실행
+//  · rotateSigningKey(): 새 버전 키 생성 + 활성화 (매년 앨범 인쇄 전 1회 권장)
+//    → 이후 발급되는 QR은 새 키, 기존 인쇄 QR은 옛 키로 계속 검증됨
+//  · revokeSigningKey('v2'): 유출 사고 시 해당 버전만 무효화 (비상용)
+//  · listSigningKeys(): 현재 키 현황 확인
+// ============================================================
+function rotateSigningKey() {
+  var props = PropertiesService.getScriptProperties();
+  var cur  = _activeKid();
+  var n    = parseInt(String(cur).replace('v', ''), 10) || 1;
+  var next = 'v' + (n + 1);
+  props.setProperty('HMAC_KEY_' + next, _randomToken(48));
+  props.setProperty(PROP_ACTIVE_KID, next);
+  Logger.log('서명 키 교체 완료: ' + cur + ' → ' + next);
+  Logger.log('기존 키는 검증용으로 유지됩니다 (인쇄된 QR 계속 재생 가능).');
+}
+
+function revokeSigningKey(kid) {
+  if (!kid) { Logger.log('예) revokeSigningKey("v2")'); return; }
+  if (kid === _activeKid()) {
+    Logger.log('⚠ 현재 활성 키는 폐기할 수 없습니다. 먼저 rotateSigningKey()로 교체하세요.');
+    return;
+  }
+  var props = PropertiesService.getScriptProperties();
+  var raw = props.getProperty(PROP_REVOKED_KIDS) || '';
+  var list = raw ? raw.split(',') : [];
+  if (list.indexOf(kid) === -1) list.push(kid);
+  props.setProperty(PROP_REVOKED_KIDS, list.join(','));
+  Logger.log('키 폐기 완료: ' + kid + ' — 이 키로 서명된 모든 토큰/QR이 즉시 무효화됩니다.');
+}
+
+function listSigningKeys() {
+  var props = PropertiesService.getScriptProperties();
+  var keys = props.getKeys();
+  Logger.log('활성 키: ' + _activeKid());
+  Logger.log('폐기 목록: ' + (props.getProperty(PROP_REVOKED_KIDS) || '(없음)'));
+  Logger.log('v1: ' + (props.getProperty(PROP_HMAC_KEY) ? '있음' : '없음'));
+  for (var i = 0; i < keys.length; i++) {
+    if (keys[i].indexOf('HMAC_KEY_v') === 0) Logger.log(keys[i].replace('HMAC_KEY_', '') + ': 있음');
+  }
 }
 
 // ============================================================
@@ -116,70 +161,6 @@ function _verifyPassword(plain, salt, expectedHash) {
   if (!salt || !expectedHash) return false;
   var actual = _hashPassword(plain, salt);
   return _constantTimeEquals(actual, expectedHash);
-}
-
-// ============================================================
-//  [B-2] 학교 비밀번호 양방향 암호화 (관리자 확인용)
-//  - 서버 비밀키(HMAC_SECRET)로 키스트림 생성 → 평문과 XOR
-//  - 무결성 태그(HMAC)로 변조 감지
-//  - 형식:  base64url(iv).base64url(cipher).base64url(tag)
-//  ※ 시트엔 암호문만 저장. 비밀키 없으면 복호화 불가.
-// ============================================================
-function _encKey() {
-  var k = PropertiesService.getScriptProperties().getProperty(PROP_HMAC_KEY);
-  if (!k) throw new Error('암호화 키 미설정 — initSetup 실행 필요');
-  return k;
-}
-// iv + 키를 seed 로 SHA-256 키스트림을 필요한 길이만큼 생성
-function _keystream(ivHex, lenBytes) {
-  var key = _encKey();
-  var out = [];
-  var counter = 0;
-  while (out.length < lenBytes) {
-    var block = Utilities.computeDigest(
-      Utilities.DigestAlgorithm.SHA_256,
-      key + '|' + ivHex + '|' + counter
-    );
-    for (var i = 0; i < block.length && out.length < lenBytes; i++) {
-      out.push(block[i] < 0 ? block[i] + 256 : block[i]);
-    }
-    counter++;
-  }
-  return out;
-}
-function _encryptPw(plain) {
-  if (plain == null) plain = '';
-  var ivHex = _randomToken(8);                       // 16 hex chars
-  var bytes = Utilities.newBlob(String(plain)).getBytes();
-  var ks    = _keystream(ivHex, bytes.length);
-  var cipher = [];
-  for (var i = 0; i < bytes.length; i++) {
-    var b = bytes[i] < 0 ? bytes[i] + 256 : bytes[i];
-    cipher.push(b ^ ks[i]);
-  }
-  var cipherHex = _bytesToHex(cipher);
-  var tag = _sign(ivHex + '.' + cipherHex);           // 무결성 태그
-  return _b64url(ivHex) + '.' + _b64url(cipherHex) + '.' + _b64url(tag);
-}
-function _decryptPw(token) {
-  if (!token) return '';
-  var parts = String(token).split('.');
-  if (parts.length !== 3) return '';
-  var ivHex     = _b64urlDecode(parts[0]);
-  var cipherHex = _b64urlDecode(parts[1]);
-  var tag       = _b64urlDecode(parts[2]);
-  // 무결성 검증
-  if (!_constantTimeEquals(tag, _sign(ivHex + '.' + cipherHex))) return '';
-  var cipher = [];
-  for (var i = 0; i < cipherHex.length; i += 2) {
-    cipher.push(parseInt(cipherHex.substr(i, 2), 16));
-  }
-  var ks = _keystream(ivHex, cipher.length);
-  var plain = [];
-  for (var j = 0; j < cipher.length; j++) {
-    plain.push(cipher[j] ^ ks[j]);
-  }
-  return Utilities.newBlob(plain).getDataAsString();
 }
 
 // ============================================================
@@ -283,6 +264,7 @@ function _issueToken(scope, school, ttlMinutes) {
   var payload = {
     scope: scope,
     school: school || '',
+    kid: _activeKid(),
     exp: Date.now() + ttlMinutes * 60 * 1000
   };
   var body = _b64url(JSON.stringify(payload));
@@ -297,9 +279,11 @@ function _verifyToken(token, requiredScope) {
     if (!token || token.indexOf('.') === -1) return null;
     var parts = token.split('.');
     var body = parts[0], sig = parts[1];
-    var expected = _sign(body);
-    if (!_constantTimeEquals(sig, expected)) return null;     // 서명 위조
     var payload = JSON.parse(_b64urlDecode(body));
+    var kid = payload.kid || 'v1';                            // 구형 토큰 호환
+    if (_isRevokedKid(kid)) return null;                      // 폐기된 키 거부
+    if (!_keyForKid(kid)) return null;
+    if (!_constantTimeEquals(sig, _signWith(kid, body))) return null; // 서명 위조
     if (Date.now() > payload.exp) return null;                // 만료
     if (requiredScope && payload.scope !== requiredScope) return null;
     return payload;
@@ -308,10 +292,34 @@ function _verifyToken(token, requiredScope) {
   }
 }
 
+// ── 키 버전(kid) 관리 ──
+// v1 = 기존 HMAC_SECRET (라벨 없는 구형 토큰과의 호환용)
+// v2 이후 = Script Properties의 'HMAC_KEY_v2', 'HMAC_KEY_v3' ...
+function _keyForKid(kid) {
+  var props = PropertiesService.getScriptProperties();
+  if (kid === 'v1') return props.getProperty(PROP_HMAC_KEY);
+  if (!/^v\d+$/.test(String(kid))) return null;
+  return props.getProperty('HMAC_KEY_' + kid);
+}
+
+function _activeKid() {
+  return PropertiesService.getScriptProperties().getProperty(PROP_ACTIVE_KID) || 'v1';
+}
+
+function _isRevokedKid(kid) {
+  var raw = PropertiesService.getScriptProperties().getProperty(PROP_REVOKED_KIDS) || '';
+  return raw.split(',').indexOf(String(kid)) !== -1;
+}
+
+function _signWith(kid, text) {
+  var key = _keyForKid(kid);
+  if (!key) throw new Error('서명 키 없음: ' + kid);
+  return _bytesToHex(Utilities.computeHmacSha256Signature(text, key));
+}
+
+// 기존 호출부 호환: 항상 "현재 활성 키"로 서명
 function _sign(text) {
-  var key = PropertiesService.getScriptProperties().getProperty(PROP_HMAC_KEY);
-  var raw = Utilities.computeHmacSha256Signature(text, key);
-  return _bytesToHex(raw);
+  return _signWith(_activeKid(), text);
 }
 
 // ============================================================
@@ -347,7 +355,9 @@ function _findSchool(school) {
         startDate: values[i][6],
         endDate: values[i][7],
         gradYear: values[i][8],
-        retainUntil: values[i][9]
+        retainUntil: values[i][9],
+        tPwHash: values[i][12] ? String(values[i][12]) : '',
+        tPwSalt: values[i][13] ? String(values[i][13]) : ''
       };
     }
   }
@@ -386,6 +396,7 @@ function registerOrUpdateSchool(data) {
   var endDate    = String(data.endDate || '').trim();
   var gradYear   = String(data.gradYear || '').trim();
   var retainUntil= String(data.retainUntil || '').trim();
+  var teacherPw  = String(data.teacherPassword || '').trim();
 
   if (!school) return makeJson({ success: false, error: '학교명을 입력하세요' });
 
@@ -409,7 +420,13 @@ function registerOrUpdateSchool(data) {
         var hash = _hashPassword(password, salt);
         sh.getRange(r, 4).setValue(hash); // pwHash
         sh.getRange(r, 5).setValue(salt); // pwSalt
-        sh.getRange(r, 12).setValue(_encryptPw(password)); // pwEnc (관리자 확인용)
+        sh.getRange(r, 12).setValue(''); // pwEnc 사용 중단 — 평문 복원 가능 저장 금지
+      }
+      if (teacherPw) {
+        var tSalt = _randomToken(16);
+        var tHash = _hashPassword(teacherPw, tSalt);
+        sh.getRange(r, 13).setValue(tHash); // tPwHash
+        sh.getRange(r, 14).setValue(tSalt); // tPwSalt
       }
       sh.getRange(r, 7).setValue(startDate);   // startDate
       sh.getRange(r, 8).setValue(endDate);     // endDate
@@ -423,9 +440,14 @@ function registerOrUpdateSchool(data) {
 
     // 1) Drive 폴더 생성 (연도별 루트 폴더 아래 학교 폴더)
     //    예: 2026_졸업앨범_음성 / ○○초등학교
+    var configuredRootId = PropertiesService.getScriptProperties().getProperty(PROP_ROOT_FOLDER_ID);
     var yearForFolder = gradYear || String(new Date().getFullYear());
     var rootName      = yearForFolder + '_' + ROOT_FOLDER_NAME;
-    var rootFolder    = _getOrCreateFolder(DriveApp.getRootFolder(), rootName);
+    // 관리자가 저장 폴더를 지정하면 신규 학교는 그 폴더 아래에 만들고,
+    // 설정이 없을 때만 기존 연도별 루트 폴더 동작을 사용합니다.
+    var rootFolder    = configuredRootId
+      ? DriveApp.getFolderById(configuredRootId)
+      : _getOrCreateFolder(DriveApp.getRootFolder(), rootName);
     var schoolFolder  = _getOrCreateFolder(rootFolder, school);
     var folderId      = schoolFolder.getId();
 
@@ -443,11 +465,17 @@ function registerOrUpdateSchool(data) {
     var nSalt = _randomToken(16);
     var nHash = _hashPassword(password, nSalt);
 
-    // 4) registry 행 추가
+    // 4) registry 행 추가 (pwEnc 자리는 항상 빈 값 — 평문 복원 가능 저장 금지)
+    var tSalt2 = '', tHash2 = '';
+    if (teacherPw) {
+      tSalt2 = _randomToken(16);
+      tHash2 = _hashPassword(teacherPw, tSalt2);
+    }
     sh.appendRow([
       school, ssId, folderId, nHash, nSalt,
       true, startDate, endDate,
-      gradYear, retainUntil, new Date(), _encryptPw(password)
+      gradYear, retainUntil, new Date(), '',
+      tHash2, tSalt2
     ]);
 
     var schoolCode = _getOrIssueSchoolCode(school);
@@ -509,16 +537,14 @@ function getSchoolList() {
   var list = [];
   for (var i = 1; i < values.length; i++) {
     if (!values[i][0]) continue;
-    var encVal = values[i][11];  // pwEnc (12번째 컬럼)
-    var plainPw = '';
-    if (encVal) { try { plainPw = _decryptPw(String(encVal)); } catch (de) { plainPw = ''; } }
     var schName = String(values[i][0]).trim();
     var schCode = _getOrIssueSchoolCode(schName);  // 학교 코드 (카톡 링크용)
     list.push({
       school:          schName,
       schoolCode:      schCode,
-      hasPassword:     !!values[i][3],                 // 해시 존재 여부
-      password:        plainPw,                         // 복호화된 평문 (암호문 있을 때만, 관리자 전용)
+      hasPassword:     !!values[i][3],                 // 학생비번 해시 존재 여부
+      hasTeacherPassword: !!values[i][12],             // 관리자 페이지 표시용
+      hasTeacherPw:    !!values[i][12],                // 기존 클라이언트 호환
       downloadEnabled: !(values[i][5] === false || String(values[i][5]).toLowerCase() === 'false'),
       startDate:       values[i][6] ? fmtDate(values[i][6]) : '',
       endDate:         values[i][7] ? fmtDate(values[i][7]) : '',
@@ -542,16 +568,23 @@ function _getOrCreateFolder(parent, name) {
 //  CacheService에 "키별 실패 횟수"를 기록. N회 실패 시 잠금.
 //  키는 학교명 기준(IP를 GAS에서 신뢰성 있게 얻기 어려움).
 // ============================================================
-var RL_MAX_FAILS   = 5;     // 허용 실패 횟수
-var RL_WINDOW_SEC  = 600;   // 잠금 유지 시간(초) = 10분
+var RL_MAX_FAILS   = 20;    // 하드 잠금 실패 횟수 (서킷브레이커)
+var RL_SOFT_FAILS  = 3;     // 이 횟수부터 응답 지연 시작
+var RL_WINDOW_SEC  = 600;   // 실패 카운트 유지 시간(초) = 10분
 
 function _rlKey(scope, id) { return 'rl_' + scope + '_' + id; }
 
-function _rlCheck(scope, id) {
+// 실패 누적 시 응답 지연 (무차별 대입 감속) — true면 시도 허용, false면 하드 잠금
+function _rlThrottle(scope, id) {
   var cache = CacheService.getScriptCache();
   var raw = cache.get(_rlKey(scope, id));
   var n = raw ? parseInt(raw, 10) : 0;
-  return n < RL_MAX_FAILS; // true면 시도 허용
+  if (n >= RL_MAX_FAILS) return false;              // 하드 잠금 (10분)
+  if (n >= RL_SOFT_FAILS) {
+    var delayMs = Math.min((n - RL_SOFT_FAILS + 1) * 2000, 15000);
+    Utilities.sleep(delayMs);                        // 실패 누적에 비례해 지연
+  }
+  return true;
 }
 
 function _rlFail(scope, id) {
@@ -581,7 +614,7 @@ function doPost(e) {
     // ── 관리자 전용 액션 (토큰 필수) ──
     var adminActions = {
       registerSchool: 1, deleteSchool: 1, setDownloadEnabled: 1,
-      deleteRecording: 1, purgeExpired: 1, setStorageConfig: 1
+      purgeExpired: 1, setStorageConfig: 1, backupNow: 1, restoreBackup: 1
     };
     if (adminActions[action]) {
       var ap = _verifyToken(data.token, 'admin');
@@ -589,26 +622,43 @@ function doPost(e) {
       if (action === 'registerSchool')     return registerOrUpdateSchool(data);
       if (action === 'deleteSchool')        return deleteSchool(data.school, data.purgeFiles);
       if (action === 'setDownloadEnabled')  return setDownloadEnabled(data.school, data.enabled);
-      if (action === 'deleteRecording')     return deleteRecording(data.school, data.fileId);
       if (action === 'purgeExpired')        return purgeExpired();
       if (action === 'setStorageConfig')    return setStorageConfig(data);
+      if (action === 'backupNow')           return backupNow();
+      if (action === 'restoreBackup')       return restoreBackup(data.backupFileId);
     }
 
-    // ── 학교 로그인 (교사용 토큰 발급) — 2번 ──
-    if (action === 'schoolLogin') return schoolLogin(data);
-
-    // ── 관리자 조회성 액션 (원래 GET 전용이었으나, 일부 네트워크/보안 프로그램이
-    //     쿼리스트링 GET 요청을 차단하는 경우가 있어 POST로도 동일하게 지원 ──
-    var adminReadActions = { schoolList: 1, storageConfig: 1, prewarm: 1, list: 1, playToken: 1 };
+    // 관리자 페이지는 조회도 POST로 보냅니다. 기존 doGet 경로는 다른 화면과의
+    // 호환성을 위해 유지하면서 동일한 관리자 토큰 검증을 적용합니다.
+    var adminReadActions = {
+      schoolList: 1, storageConfig: 1, prewarm: 1,
+      list: 1, playToken: 1, listBackups: 1
+    };
     if (adminReadActions[action]) {
-      var rp = _verifyToken(data.token, 'admin');
-      if (!rp) return makeJson({ ok: false, error: 'AUTH_REQUIRED' });
+      var readAdmin = _verifyToken(data.token, 'admin');
+      if (!readAdmin) return makeJson({ success: false, ok: false, error: 'AUTH_REQUIRED' });
       if (action === 'schoolList')    return getSchoolList();
       if (action === 'storageConfig') return storageConfig();
       if (action === 'prewarm')       return prewarm();
       if (action === 'list')          return listRecordings(String(data.school || '').trim());
       if (action === 'playToken')     return issuePlayToken(data.school || '', data.f || '');
+      if (action === 'listBackups')   return listBackups();
     }
+
+    // ── 녹음 삭제: 관리자 또는 교사(school 토큰) — 교사 검수용 ──
+    if (action === 'deleteRecording') {
+      var delAdmin = _verifyToken(data.token, 'admin');
+      if (delAdmin) return deleteRecording(data.school, data.fileId);
+      var delTeacher = _verifyToken(data.token, 'school');
+      if (delTeacher) return deleteRecording(delTeacher.school, data.fileId); // 토큰의 학교로 고정 — 타 학교 삭제 불가
+      return makeJson({ success: false, error: 'AUTH_REQUIRED' });
+    }
+
+    // ── 학생 로그인 (녹음 전용 record 토큰 발급) ──
+    if (action === 'schoolLogin') return schoolLogin(data);
+
+    // ── 교사 로그인 (열람용 school 토큰 발급) ──
+    if (action === 'teacherLogin') return teacherLogin(data);
 
     // ── 음성 업로드 (학생용; 학교 토큰 필요) — 6번 Lock ──
     if (action === 'upload') return uploadRecording(data);
@@ -658,20 +708,6 @@ function doGet(e) {
     return getSchoolList();
   }
 
-  // 관리자 토큰 필요: 저장 루트 폴더 설정 조회
-  if (action === 'storageConfig') {
-    var scp = _verifyToken(e.parameter.token, 'admin');
-    if (!scp) return makeJson({ ok: false, error: 'AUTH_REQUIRED' });
-    return storageConfig();
-  }
-
-  // 관리자 토큰 필요: 컨테이너 워밍(콜드 스타트 방지용 ping)
-  if (action === 'prewarm') {
-    var wp = _verifyToken(e.parameter.token, 'admin');
-    if (!wp) return makeJson({ ok: false, error: 'AUTH_REQUIRED' });
-    return prewarm();
-  }
-
   // 관리자 토큰 필요: QR용 play 토큰 발급 (fileId+school에 서명)
   if (action === 'playToken') {
     var pp = _verifyToken(e.parameter.token, 'admin');
@@ -687,7 +723,7 @@ function doGet(e) {
 // ============================================================
 function adminLogin(data) {
   var pw = String(data.password || '');
-  if (!_rlCheck('admin', 'master'))
+  if (!_rlThrottle('admin', 'master'))
     return makeJson({ success: false, error: 'LOCKED', message: '시도가 많아 잠시 잠겼습니다. 10분 후 다시 시도하세요.' });
 
   var props = PropertiesService.getScriptProperties();
@@ -708,7 +744,7 @@ function schoolLogin(data) {
   var pw     = String(data.password || '');
   if (!school) return makeJson({ success: false, error: '학교명이 없습니다' });
 
-  if (!_rlCheck('school', school))
+  if (!_rlThrottle('school', school))
     return makeJson({ success: false, error: 'LOCKED', message: '시도가 많아 잠시 잠겼습니다. 10분 후 다시 시도하세요.' });
 
   var info = _findSchool(school);
@@ -725,6 +761,31 @@ function schoolLogin(data) {
   if (periodErr) return makeJson({ success: false, error: 'PERIOD', message: periodErr });
 
   _rlReset('school', school);
+  return makeJson({ success: true, token: _issueToken('record', school, TOKEN_TTL_SCHOOL) });
+}
+
+// 교사 로그인 — 교사용 비밀번호 검증 후 열람용(school) 토큰 발급
+//  ※ 기간 검증 없음: 녹음 기간 종료 후에도 교사 검수/열람 가능
+function teacherLogin(data) {
+  var school = String(data.school || '').trim();
+  var pw     = String(data.password || '');
+  if (!school) return makeJson({ success: false, error: '학교명이 없습니다' });
+
+  if (!_rlThrottle('teacher', school))
+    return makeJson({ success: false, error: 'LOCKED', message: '시도가 많아 잠시 잠겼습니다. 10분 후 다시 시도하세요.' });
+
+  var info = _findSchool(school);
+  if (!info) return makeJson({ success: false, error: 'NO_SCHOOL' });
+  if (!info.tPwHash)
+    return makeJson({ success: false, error: 'NOT_CONFIGURED',
+      message: '교사용 비밀번호가 아직 설정되지 않았습니다. 관리자에게 문의하세요.' });
+
+  if (!_verifyPassword(pw, info.tPwSalt, info.tPwHash)) {
+    var fails = _rlFail('teacher', school);
+    return makeJson({ success: false, error: 'WRONG', remain: Math.max(0, RL_MAX_FAILS - fails) });
+  }
+
+  _rlReset('teacher', school);
   return makeJson({ success: true, token: _issueToken('school', school, TOKEN_TTL_SCHOOL) });
 }
 
@@ -782,10 +843,12 @@ function _periodError(startDate, endDate) {
 }
 
 // ============================================================
-//  [I] 업로드 — 6번 (LockService 중복방지)
+//  [I] 업로드 — 락 없는 낙관적 중복 방지 (전역 락 병목 제거)
+//  · record 토큰 전용 (학생은 업로드만 가능, 열람 불가)
+//  · 서버측 검증: MIME 화이트리스트 / 글자수 / 크기 상한
 // ============================================================
 function uploadRecording(data) {
-  var sp = _verifyToken(data.token, 'school');
+  var sp = _verifyToken(data.token, 'record');
   if (!sp) return makeJson({ success: false, error: 'AUTH_REQUIRED' });
 
   var school    = sp.school; // 토큰의 학교로 고정 (위조 방지)
@@ -797,22 +860,25 @@ function uploadRecording(data) {
   if (!name || !className || !audioB64)
     return makeJson({ success: false, error: '필수 항목 누락' });
 
+  // ── 업로드 검증: MIME 화이트리스트 / 글자수 / 크기 상한 ──
+  var ALLOWED_MIME = { 'audio/webm': 1, 'audio/mp4': 1, 'audio/ogg': 1 };
+  var mimeBase = String(mimeType).split(';')[0].trim().toLowerCase(); // 'audio/webm;codecs=opus' 대응
+  if (!ALLOWED_MIME[mimeBase])
+    return makeJson({ success: false, error: '허용되지 않는 파일 형식입니다' });
+  if (name.length > 30 || className.length > 30)
+    return makeJson({ success: false, error: '이름/반 정보가 너무 깁니다' });
+  if (typeof audioB64 !== 'string' || audioB64.length > 7000000) // base64 기준 ≈ 원본 5MB
+    return makeJson({ success: false, error: '파일이 너무 큽니다 (최대 5MB)' });
+
   var info = _findSchool(school);
   if (!info) return makeJson({ success: false, error: 'NO_SCHOOL' });
 
-  var lock = LockService.getScriptLock();
-  try { lock.waitLock(15000); } catch (le) {
-    return makeJson({ success: false, error: '서버가 혼잡합니다. 잠시 후 다시 시도해 주세요.' });
-  }
-
   try {
     var sheet = _getSchoolRecSheet(info.ssId);
-    var rows  = sheet.getDataRange().getValues();
-    // 중복 검사 (락 안에서 — race condition 차단)
-    for (var i = 1; i < rows.length; i++) {
-      if (String(rows[i][1]).trim() === name && String(rows[i][2]).trim() === className)
-        return makeJson({ success: false, error: 'ALREADY_SUBMITTED' });
-    }
+
+    // 1차 중복 검사 (사전 차단)
+    if (_findDupRow(sheet, name, className) !== -1)
+      return makeJson({ success: false, error: 'ALREADY_SUBMITTED' });
 
     var ext = 'webm';
     if (mimeType.indexOf('mp4') !== -1) ext = 'm4a';
@@ -823,15 +889,35 @@ function uploadRecording(data) {
     var bytes    = Utilities.base64Decode(audioB64);
     var blob     = Utilities.newBlob(bytes, mimeType, fileName);
     var file     = folder.createFile(blob);
-    // 비공개 유지 — 공개 공유 설정하지 않음 (2번)
+    // 비공개 유지 — 공개 공유 설정하지 않음
 
     sheet.appendRow([new Date(), name, className, fileName, file.getId(), mimeType]);
+
+    // 2차 검사 — 락 없는 동시 제출 레이스 해소:
+    // 같은 이름·반의 "가장 위 행"이 내 행이 아니면 내 제출을 스스로 철회
+    var firstRow = _findDupRow(sheet, name, className);
+    var rows = sheet.getDataRange().getValues();
+    if (firstRow !== -1 && String(rows[firstRow][4]) !== file.getId()) {
+      for (var i = rows.length - 1; i >= 1; i--) {
+        if (String(rows[i][4]) === file.getId()) { sheet.deleteRow(i + 1); break; }
+      }
+      try { file.setTrashed(true); } catch (te) {}
+      return makeJson({ success: false, error: 'ALREADY_SUBMITTED' });
+    }
+
     return makeJson({ success: true, fileId: file.getId() });
   } catch (err) {
     return makeJson({ success: false, error: err.message });
-  } finally {
-    lock.releaseLock();
   }
+}
+
+// 이름+반이 일치하는 첫 데이터 행 인덱스(0기준) 반환. 없으면 -1
+function _findDupRow(sheet, name, className) {
+  var rows = sheet.getDataRange().getValues();
+  for (var i = 1; i < rows.length; i++) {
+    if (String(rows[i][1]).trim() === name && String(rows[i][2]).trim() === className) return i;
+  }
+  return -1;
 }
 
 // ============================================================
@@ -922,7 +1008,7 @@ function issuePlayToken(school, fileId) {
 // 재생 토큰 문자열 생성 (issuePlayToken / resolveCode 공용)
 function _makePlayToken(school, fileId) {
   var payload = {
-    scope: 'play', school: school, fid: fileId,
+    scope: 'play', school: school, fid: fileId, kid: _activeKid(),
     exp: Date.now() + PLAY_TOKEN_TTL_DAYS * 24 * 60 * 60 * 1000
   };
   var body = _b64url(JSON.stringify(payload));
@@ -933,8 +1019,11 @@ function _verifyPlayToken(token, school, fileId) {
   try {
     if (!token || token.indexOf('.') === -1) return false;
     var parts = token.split('.');
-    if (!_constantTimeEquals(parts[1], _sign(parts[0]))) return false;
     var p = JSON.parse(_b64urlDecode(parts[0]));
+    var kid = p.kid || 'v1';                             // 구형 QR 호환
+    if (_isRevokedKid(kid)) return false;
+    if (!_keyForKid(kid)) return false;
+    if (!_constantTimeEquals(parts[1], _signWith(kid, parts[0]))) return false;
     if (p.scope !== 'play') return false;
     if (Date.now() > p.exp) return false;
     if (String(p.school).trim() !== String(school).trim()) return false;
@@ -1033,13 +1122,257 @@ function installPurgeTrigger() {
 }
 
 // ============================================================
+//  [L] 일일 자동 백업 — registry + 학교별 시트 사본, 7일 순환 보관
+//  ※ 음성 파일 원본은 용량 문제로 사본을 만들지 않음 (Drive가 원본 저장소)
+//     이 백업은 "시트 오염·실수 삭제" 시 메타데이터 복구용
+// ============================================================
+var BACKUP_ROOT_NAME = '졸업앨범_백업';
+var BACKUP_KEEP_DAYS = 7;
+
+function dailyBackup() {
+  var root      = _getOrCreateFolder(DriveApp.getRootFolder(), BACKUP_ROOT_NAME);
+  var stamp     = fmtDate(new Date());
+  var dayFolder = _getOrCreateFolder(root, 'backup_' + stamp);
+
+  // 관리자 페이지 백업 목록에서 확인·복원할 수 있는 JSON 스냅샷도 보관합니다.
+  try { _createRegistryBackup('auto'); }
+  catch (backupErr) { Logger.log('Registry JSON 백업 실패: ' + backupErr.message); }
+
+  // 1) registry 사본
+  var regId = REGISTRY_SS_ID ||
+              PropertiesService.getScriptProperties().getProperty(PROP_REGISTRY_ID);
+  try { DriveApp.getFileById(regId).makeCopy('registry_' + stamp, dayFolder); } catch (e0) {}
+
+  // 2) 각 학교 스프레드시트 사본
+  var values = _getRegistrySheet().getDataRange().getValues();
+  for (var i = 1; i < values.length; i++) {
+    var ssId = values[i][1];
+    if (!ssId) continue;
+    try {
+      DriveApp.getFileById(ssId).makeCopy('졸업앨범_' + values[i][0] + '_' + stamp, dayFolder);
+    } catch (e1) {}
+  }
+
+  // 3) 보관일 초과 백업 폴더 정리
+  var cutoff = new Date(); cutoff.setDate(cutoff.getDate() - BACKUP_KEEP_DAYS);
+  var iter = root.getFolders();
+  while (iter.hasNext()) {
+    var f = iter.next();
+    var m = f.getName().match(/^backup_(\d{4}-\d{2}-\d{2})$/);
+    if (!m) continue;
+    var d = new Date(m[1]);
+    if (!isNaN(d) && d < cutoff) { try { f.setTrashed(true); } catch (e2) {} }
+  }
+}
+
+// 백업 트리거 설치 — 에디터에서 1회 실행 (매일 새벽 2시, 새벽 3시 보관정리 전에 실행)
+function installBackupTrigger() {
+  var triggers = ScriptApp.getProjectTriggers();
+  for (var i = 0; i < triggers.length; i++) {
+    if (triggers[i].getHandlerFunction() === 'dailyBackup') return; // 이미 있음
+  }
+  ScriptApp.newTrigger('dailyBackup').timeBased().everyDays(1).atHour(2).create();
+  Logger.log('백업 트리거 설치 완료 (매일 새벽 2시, ' + BACKUP_KEEP_DAYS + '일 보관)');
+}
+
+// 관리자 페이지의 수동 백업·목록·복원 API가 사용하는 registry JSON 백업.
+// 기존 dailyBackup의 스프레드시트 사본 백업은 그대로 유지합니다.
+function _getRegistryBackupFolder(createIfMissing) {
+  var folders = DriveApp.getFoldersByName(BACKUP_ROOT_NAME);
+  if (folders.hasNext()) return folders.next();
+  return createIfMissing ? DriveApp.getRootFolder().createFolder(BACKUP_ROOT_NAME) : null;
+}
+
+function _createRegistryBackup(reason) {
+  var root = _getRegistryBackupFolder(true);
+  var registryRows = _getRegistrySheet().getDataRange().getValues();
+  var codesRows = _getCodesSheet().getDataRange().getValues();
+  var now = new Date();
+  var stamp = Utilities.formatDate(now, Session.getScriptTimeZone(), 'yyyy-MM-dd_HHmmss');
+  var payload = {
+    format: 'registry_backup_v1',
+    createdAt: now.toISOString(),
+    registry: registryRows,
+    codes: codesRows
+  };
+  var file = root.createFile(
+    'registry_backup_' + stamp + '_' + reason + '.json',
+    JSON.stringify(payload),
+    MimeType.PLAIN_TEXT
+  );
+  _pruneRegistryBackups(root, 60);
+  return {
+    fileId: file.getId(), fileName: file.getName(),
+    schoolCount: Math.max(0, registryRows.length - 1),
+    codeCount: Math.max(0, codesRows.length - 1)
+  };
+}
+
+function _pruneRegistryBackups(root, keepCount) {
+  var iter = root.getFiles();
+  var files = [];
+  while (iter.hasNext()) {
+    var f = iter.next();
+    if (/^registry_backup_.*\.json$/i.test(f.getName())) {
+      files.push({ file: f, created: f.getDateCreated().getTime() });
+    }
+  }
+  files.sort(function(a, b) { return b.created - a.created; });
+  for (var i = keepCount; i < files.length; i++) {
+    try { files[i].file.setTrashed(true); } catch (e) {}
+  }
+}
+
+function backupNow() {
+  try {
+    var result = _createRegistryBackup('manual');
+    return makeJson({ ok: true, fileId: result.fileId, fileName: result.fileName,
+      schoolCount: result.schoolCount, codeCount: result.codeCount });
+  } catch (err) {
+    return makeJson({ ok: false, error: err.message });
+  }
+}
+
+function listBackups() {
+  try {
+    var root = _getRegistryBackupFolder(false);
+    if (!root) return makeJson({ ok: true, backups: [] });
+    var iter = root.getFiles();
+    var backups = [];
+    while (iter.hasNext()) {
+      var f = iter.next();
+      if (!/^registry_backup_.*\.json$/i.test(f.getName())) continue;
+      backups.push({
+        fileId: f.getId(), fileName: f.getName(),
+        createdAt: f.getDateCreated().toISOString(), size: f.getSize()
+      });
+    }
+    backups.sort(function(a, b) { return new Date(b.createdAt) - new Date(a.createdAt); });
+    return makeJson({ ok: true, backups: backups });
+  } catch (err) {
+    return makeJson({ ok: false, error: err.message });
+  }
+}
+
+function _replaceSheetValues(sheet, rows) {
+  if (!Array.isArray(rows) || !rows.length || !Array.isArray(rows[0]))
+    throw new Error('백업 시트 데이터 형식이 올바르지 않습니다.');
+  var width = rows.reduce(function(max, row) {
+    if (!Array.isArray(row)) throw new Error('백업 행 형식이 올바르지 않습니다.');
+    return Math.max(max, row.length);
+  }, 0);
+  if (!width) throw new Error('백업 시트에 열이 없습니다.');
+  var normalized = rows.map(function(row) {
+    var copy = row.slice();
+    while (copy.length < width) copy.push('');
+    return copy;
+  });
+  var maxRows = sheet.getMaxRows();
+  var maxCols = sheet.getMaxColumns();
+  if (maxRows < normalized.length) sheet.insertRowsAfter(maxRows, normalized.length - maxRows);
+  if (maxCols < width) sheet.insertColumnsAfter(maxCols, width - maxCols);
+  sheet.clearContents();
+  sheet.getRange(1, 1, normalized.length, width).setValues(normalized);
+  sheet.setFrozenRows(1);
+}
+
+function restoreBackup(backupFileId) {
+  if (!backupFileId) return makeJson({ ok: false, error: '백업 파일 ID가 없습니다.' });
+  try {
+    var root = _getRegistryBackupFolder(false);
+    if (!root) return makeJson({ ok: false, error: '백업 폴더를 찾을 수 없습니다.' });
+    var file = DriveApp.getFileById(String(backupFileId));
+    if (!/^registry_backup_.*\.json$/i.test(file.getName()))
+      return makeJson({ ok: false, error: '복원할 수 있는 registry 백업 파일이 아닙니다.' });
+    var parents = file.getParents();
+    var inBackupFolder = false;
+    while (parents.hasNext()) {
+      if (parents.next().getId() === root.getId()) { inBackupFolder = true; break; }
+    }
+    if (!inBackupFolder) return makeJson({ ok: false, error: '지정된 백업 폴더의 파일이 아닙니다.' });
+
+    var payload = JSON.parse(file.getBlob().getDataAsString());
+    if (!payload || payload.format !== 'registry_backup_v1' ||
+        !Array.isArray(payload.registry) || !Array.isArray(payload.codes) ||
+        !payload.registry.length || !payload.codes.length ||
+        String(payload.registry[0][0]) !== 'school' ||
+        String(payload.codes[0][0]) !== 'code') {
+      return makeJson({ ok: false, error: '백업 파일의 형식 또는 헤더가 올바르지 않습니다.' });
+    }
+
+    // 복원 전 현재 상태를 별도 파일로 보존해 즉시 되돌릴 수 있게 합니다.
+    _createRegistryBackup('preRestore');
+    _replaceSheetValues(_getRegistrySheet(), payload.registry);
+    _replaceSheetValues(_getCodesSheet(), payload.codes);
+    return makeJson({ ok: true,
+      restoredSchools: Math.max(0, payload.registry.length - 1),
+      restoredCodes: Math.max(0, payload.codes.length - 1) });
+  } catch (err) {
+    return makeJson({ ok: false, error: err.message });
+  }
+}
+
+// 관리자 설정 탭에서 신규 학교의 기본 저장 폴더를 지정합니다.
+function _extractFolderId(input) {
+  var value = String(input || '').trim();
+  if (!value) return '';
+  var match = value.match(/\/folders\/([a-zA-Z0-9_-]+)/);
+  if (match) return match[1];
+  match = value.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+  return match ? match[1] : value;
+}
+
+function setStorageConfig(data) {
+  var props = PropertiesService.getScriptProperties();
+  var folderId = _extractFolderId(data.rootFolderId);
+  if (!folderId) {
+    props.deleteProperty(PROP_ROOT_FOLDER_ID);
+    return makeJson({ ok: true, cleared: true });
+  }
+  try {
+    var folder = DriveApp.getFolderById(folderId);
+    var name = folder.getName(); // 접근 권한 확인
+    props.setProperty(PROP_ROOT_FOLDER_ID, folderId);
+    return makeJson({ ok: true, rootFolderId: folderId, rootFolderName: name });
+  } catch (err) {
+    return makeJson({ ok: false, error: '폴더를 찾을 수 없거나 접근 권한이 없습니다.' });
+  }
+}
+
+function storageConfig() {
+  var folderId = PropertiesService.getScriptProperties().getProperty(PROP_ROOT_FOLDER_ID);
+  if (!folderId) return makeJson({ ok: true });
+  try {
+    var folder = DriveApp.getFolderById(folderId);
+    return makeJson({ ok: true, rootFolderId: folderId, rootFolderName: folder.getName() });
+  } catch (err) {
+    return makeJson({ ok: false, error: '저장 폴더에 접근할 수 없습니다.' });
+  }
+}
+
+function prewarm() {
+  try {
+    _getRegistrySheet().getLastRow();
+    return makeJson({ ok: true });
+  } catch (err) {
+    return makeJson({ ok: false, error: err.message });
+  }
+}
+
+// ============================================================
 //  [전체 초기화] 모든 학교/녹음/코드 삭제 (테스트 정리용)
 //  ※ 에디터에서 수동 실행. 되돌릴 수 없으니 주의.
 //  - 각 학교 Drive 폴더 + 스프레드시트를 휴지통으로
 //  - registry / codes 시트를 헤더만 남기고 비움
 //  - HMAC키·관리자비번 등 설정값은 유지
 // ============================================================
-function resetAllData() {
+function resetAllData(confirmText) {
+  // 안전핀: 확인 문자열 없이 실행하면 아무것도 삭제하지 않음
+  if (confirmText !== '전체삭제확인') {
+    Logger.log('⚠ 안전핀 작동 — 아무것도 삭제되지 않았습니다.');
+    Logger.log('정말 전체 삭제하려면 에디터에서 resetAllData("전체삭제확인") 형태로 실행하세요.');
+    return;
+  }
   var sh = _getRegistrySheet();
   var values = sh.getDataRange().getValues();
   var trashed = 0;
@@ -1064,55 +1397,6 @@ function resetAllData() {
   Logger.log('registry / codes 시트를 헤더만 남기고 비웠습니다.');
   Logger.log('※ Drive 휴지통은 30일 후 자동 삭제되며, 수동으로 영구삭제 가능합니다.');
   Logger.log('─────────────────────────');
-}
-
-// ============================================================
-//  [L] 저장소(루트 폴더) 설정 — 관리자 설정 탭
-// ============================================================
-//  URL 통째로 붙여넣어도, ID만 넣어도 동작하도록 추출
-function _extractFolderId(input) {
-  var s = String(input || '').trim();
-  if (!s) return '';
-  var m = s.match(/\/folders\/([a-zA-Z0-9_-]+)/);
-  if (m) return m[1];
-  m = s.match(/[?&]id=([a-zA-Z0-9_-]+)/);
-  if (m) return m[1];
-  return s; // 이미 ID만 입력한 경우
-}
-
-// 신규 학교 저장 루트 폴더 설정 저장 (빈 값이면 설정 해제)
-function setStorageConfig(data) {
-  var props = PropertiesService.getScriptProperties();
-  var id = _extractFolderId(data.rootFolderId);
-  if (!id) {
-    props.deleteProperty(PROP_ROOT_FOLDER_ID);
-    return makeJson({ ok: true, cleared: true });
-  }
-  try {
-    var folder = DriveApp.getFolderById(id); // 접근 가능한 폴더인지 검증
-    props.setProperty(PROP_ROOT_FOLDER_ID, id);
-    return makeJson({ ok: true, rootFolderId: id, rootFolderName: folder.getName() });
-  } catch (e) {
-    return makeJson({ ok: false, error: '폴더를 찾을 수 없습니다. ID나 URL을 다시 확인하세요.' });
-  }
-}
-
-// 현재 저장된 루트 폴더 설정 조회
-function storageConfig() {
-  var id = PropertiesService.getScriptProperties().getProperty(PROP_ROOT_FOLDER_ID);
-  if (!id) return makeJson({ ok: true });
-  try {
-    var folder = DriveApp.getFolderById(id);
-    return makeJson({ ok: true, rootFolderId: id, rootFolderName: folder.getName() });
-  } catch (e) {
-    return makeJson({ ok: true }); // 폴더가 삭제된 경우 등은 조용히 무시
-  }
-}
-
-// 컨테이너 워밍 — registry를 살짝 건드려 콜드 스타트 방지
-function prewarm() {
-  try { _getRegistrySheet(); } catch (e) {}
-  return makeJson({ ok: true });
 }
 
 // ============================================================
@@ -1188,3 +1472,4 @@ function _selfTest() {
     Logger.log('HMAC 키 없음 — initSetup() 먼저 실행하세요.');
   }
 }
+
