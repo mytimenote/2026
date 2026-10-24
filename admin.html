@@ -233,7 +233,6 @@ footer{margin-top:3rem;text-align:center;font-size:12px;color:var(--faint);lette
       <select id="schoolSelect" onchange="loadStudents()">
         <option value="">— 학교를 선택하세요 —</option>
       </select>
-      <div id="schoolLoadError" style="display:none;margin-top:.65rem;padding:.65rem .8rem;border-radius:8px;background:#FFF2F3;color:#D33;font-size:12px;line-height:1.6"></div>
       <div class="loading-row" id="loadingRow"><span class="spinner"></span> 불러오는 중…</div>
     </div>
     <div id="resultSection" style="display:none;animation:fadeIn .4s ease both">
@@ -652,12 +651,14 @@ footer{margin-top:3rem;text-align:center;font-size:12px;color:var(--faint);lette
   /* QR URL 생성 — 짧은 코드(c)로 단순 QR, 없으면 기존 f/t/s 폴백 */
   const makePlayUrl = s => {
     const code = s.studentCode || s.code || s.shortCode || s.c;
+    const gasParam = '&g=' + encodeURIComponent(getGasUrl());
     if (code) {
-      return getPagesUrl() + '/play.html?c=' + encodeURIComponent(code);
+      return getPagesUrl() + '/play.html?c=' + encodeURIComponent(code) + gasParam;
     }
     return getPagesUrl() + '/play.html?f=' + encodeURIComponent(s.fileId || '')
       + '&t=' + encodeURIComponent(s.playToken || '')
-      + '&s=' + encodeURIComponent(document.getElementById('schoolSelect').value);
+      + '&s=' + encodeURIComponent(document.getElementById('schoolSelect').value)
+      + gasParam;
   };
 
   /* ── 학교 목록 ── */
@@ -665,31 +666,14 @@ footer{margin-top:3rem;text-align:center;font-size:12px;color:var(--faint);lette
     try {
       const data = await apiGet({ action:'schoolList' });
       if (data.error === 'AUTH_REQUIRED'){ logout(); return; }
-      const errorEl = document.getElementById('schoolLoadError');
       const sel  = document.getElementById('schoolSelect');
-      if (data.error || !Array.isArray(data.schools)) {
-        sel.innerHTML = '<option value="">학교 목록을 불러오지 못했습니다</option>';
-        errorEl.textContent = '학교 목록 요청 오류: ' + (data.error || '서버 응답 형식이 올바르지 않습니다.');
-        errorEl.style.display = 'block';
-        return;
-      }
       const names = (data.schools || []).map(s => s.school);
       sel.innerHTML = '<option value="">— 학교를 선택하세요 —</option>' +
         names.map(s => `<option value="${esc(s)}">${esc(s)}</option>`).join('');
-      if (!names.length) {
-        errorEl.textContent = '서버 응답은 받았지만 학교가 0개입니다. registry 스프레드시트와 REGISTRY_SS_ID를 확인하세요.';
-        errorEl.style.display = 'block';
-      } else {
-        errorEl.textContent = '';
-        errorEl.style.display = 'none';
-      }
       document.getElementById('settingsErr').style.display = 'none';
-      if (names.length) showMsg('settingsOk','✓ 연결 성공 · 학교 ' + names.length + '개');
+      showMsg('settingsOk','✓ 연결 성공');
     } catch (err) {
       console.error('연결 테스트 실패 상세:', err);
-      const errorEl = document.getElementById('schoolLoadError');
-      errorEl.textContent = '학교 목록 연결 실패: ' + err.message;
-      errorEl.style.display = 'block';
       showMsg('settingsErr', '연결 실패: ' + err.message);
     }
   }
@@ -961,8 +945,6 @@ footer{margin-top:3rem;text-align:center;font-size:12px;color:var(--faint);lette
     try {
       const data = await apiGet({ action:'schoolList' });
       if (data.error === 'AUTH_REQUIRED'){ logout(); return; }
-      if (data.error) throw new Error(data.error);
-      if (!Array.isArray(data.schools)) throw new Error('서버 응답에 학교 목록이 없습니다.');
       allPasswords = data.schools || [];
       // schoolList 응답에 평문 비번(password / teacherPassword)이 이미 포함됨 → 그대로 사용
       allPasswords.forEach(p => {
@@ -972,8 +954,8 @@ footer{margin-top:3rem;text-align:center;font-size:12px;color:var(--faint);lette
       const q = document.getElementById('pwSearchInput')?.value || '';
       renderPasswords(q);
       renderBulkList();
-    } catch (err) {
-      document.getElementById('pwList').innerHTML = '<div class="pw-empty">학교 목록 불러오기 실패: ' + esc(err.message) + '</div>';
+    } catch {
+      document.getElementById('pwList').innerHTML = '<div class="pw-empty">불러오기 실패</div>';
     }
   }
 
@@ -1182,9 +1164,10 @@ footer{margin-top:3rem;text-align:center;font-size:12px;color:var(--faint);lette
     const p = allPasswords.find(x => x.school === school) || {};
     // 학교 단축 코드(schoolCode) 있으면 단축 URL, 없으면 기존 ?school=학교명 폴백
     const sCode = p.schoolCode || p.code;
+    const gasParam = '&g=' + encodeURIComponent(getGasUrl());
     const recordUrl = sCode
-      ? getPagesUrl() + '/record.html?c=' + encodeURIComponent(sCode) + '&school=' + encodeURIComponent(school)
-      : getPagesUrl() + '/record.html?school=' + encodeURIComponent(school);
+      ? getPagesUrl() + '/record.html?c=' + encodeURIComponent(sCode) + '&school=' + encodeURIComponent(school) + gasParam
+      : getPagesUrl() + '/record.html?school=' + encodeURIComponent(school) + gasParam;
     let msg = `🎓 ${school} 졸업 음성 메시지 녹음 안내\n\n`;
     msg += `📎 녹음 링크\n${recordUrl}\n`;
     if (p.hasPassword) {

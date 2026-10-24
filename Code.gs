@@ -608,6 +608,9 @@ function doPost(e) {
     var data   = JSON.parse(e.postData.contents);
     var action = data.action || 'upload';
 
+    // 공개 QR 재생: 짧은 학생 코드를 검증한 뒤 해당 음성 파일을 반환합니다.
+    if (action === 'playQr') return playQr(data.c || '');
+
     // ── 관리자 로그인 (토큰 발급) — 1번 ──
     if (action === 'adminLogin') return adminLogin(data);
 
@@ -816,6 +819,35 @@ function resolveCode(code) {
   }
 
   return makeJson({ ok: false, error: 'UNKNOWN_TYPE' });
+}
+
+// 공개: 학생 QR 코드로 음성 파일과 표시 정보를 함께 조회합니다.
+function playQr(code) {
+  code = String(code || '').trim();
+  if (!code) return makeJson({ ok: false, error: 'NO_CODE' });
+
+  var m = _lookupCode(code);
+  if (!m || m.type !== 'student') return makeJson({ ok: false, error: 'INVALID_CODE' });
+  var info = _findSchool(m.school);
+  if (!info) return makeJson({ ok: false, error: 'NO_SCHOOL' });
+
+  var rows = _getSchoolRecSheet(info.ssId).getDataRange().getValues();
+  var meta = null;
+  for (var i = 1; i < rows.length; i++) {
+    if (String(rows[i][4]).trim() === String(m.fileId).trim()) { meta = rows[i]; break; }
+  }
+  if (!meta) return makeJson({ ok: false, error: 'NO_FILE' });
+
+  try {
+    var blob = DriveApp.getFileById(m.fileId).getBlob();
+    return makeJson({
+      ok: true, b64: Utilities.base64Encode(blob.getBytes()),
+      mime: blob.getContentType(), school: m.school,
+      name: meta[1], className: meta[2], downloadEnabled: info.downloadEnabled
+    });
+  } catch (ex) {
+    return makeJson({ ok: false, error: ex.message });
+  }
 }
 
 // 공개: 학교 존재 + 기간만 확인 (학생 녹음 진입 전 안내용)

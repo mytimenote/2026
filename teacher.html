@@ -244,7 +244,9 @@ footer{margin-top:3rem;text-align:center;font-size:12px;color:var(--faint);lette
 </div>
 
 <script>
-  const GAS_URL = 'https://script.google.com/macros/s/AKfycbxCIUMBHvu0YU77z4ULqrZAez6bue3cWi7Fzyg5slz-FdIY05K1EclHCRDUdcBoxXbPuQ/exec';
+  const DEFAULT_GAS_URL = 'https://script.google.com/macros/s/AKfycbw-JkWKcgOUNcc6CI1OfgLBVCiGtwDUDvkG-JnWqAqEIyV_YegOwcn1e0m4yiYMsU5heg/exec';
+  const URL_PARAMS = new URLSearchParams(location.search);
+  const GAS_URL = (URL_PARAMS.get('g') || DEFAULT_GAS_URL).trim();
   const $ = id => document.getElementById(id);
 
   let currentSchool  = '';
