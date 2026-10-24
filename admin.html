@@ -1006,7 +1006,7 @@ footer{margin-top:3rem;text-align:center;font-size:12px;color:var(--faint);lette
         : '<span style="color:var(--faint)">기간 없음 (항상 허용)</span>';
       // 선생님 비번 표시 (학생 비번과 나란히)
       const teacherPwDisp = p.hasTeacherPassword
-        ? (p.teacherPassword ? '👩‍🏫 ' + esc(p.teacherPassword) : '👩‍🏫 설정됨')
+        ? (p.teacherPassword ? '👩‍🏫 ' + esc(p.teacherPassword) : '👩‍🏫 확인 불가 · 재설정 필요')
         : '👩‍🏫 미설정';
       return `
       <div class="pw-row" id="pwrow-${encSc}">
@@ -1014,7 +1014,7 @@ footer{margin-top:3rem;text-align:center;font-size:12px;color:var(--faint);lette
           <span class="pw-school">🏫 ${schoolDisp}</span>
           <span class="pw-value" id="pwval-${encSc}">${
             p.hasPassword
-              ? (p.plainPassword ? '🔑 ' + esc(p.plainPassword) : '🔒 설정됨')
+              ? (p.plainPassword ? '🔑 ' + esc(p.plainPassword) : '🔒 확인 불가 · 재설정 필요')
               : '⚠ 미설정'
           }</span>
         </div>
